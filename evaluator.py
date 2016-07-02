@@ -26,13 +26,15 @@ def run(user_model, teacher):
 
     history = History(user_model.prior)
     for i in range(settings.N_EXAMPLES):
-        print "examples: " + str(history.examples)
         example = teacher.next_example(history)
         history.add_example(example)
         prediction = user_model.predict_grid(history)
         history.add_prediction(prediction)
+        print "examples: " + str(history.examples)
         print prediction
 
+    history.plot(filename="%s-%s" % (user_model.name, teacher.name),
+        title="Active learning with %s user model, %s teacher" % (user_model.name, teacher.name))
     return history
 
 def compare(teacher_preds):

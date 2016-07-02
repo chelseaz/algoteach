@@ -4,6 +4,7 @@ from sklearn import svm
 
 class UserModel(object):
     def __init__(self, settings):
+        self.name = "base"
         self.settings = settings
         self.prior = None
 
@@ -20,6 +21,7 @@ class UserModel(object):
 class SVMUserModel(UserModel):
     def __init__(self, settings):
         super(self.__class__, self).__init__(settings)
+        self.name = "SVM"
 
     def predict_grid(self, history):
         # fit SVM to all examples in history
