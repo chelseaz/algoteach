@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 from user_model import SVMUserModel
 from teacher import RandomTeacher, OptimalTeacher
@@ -9,6 +10,7 @@ class Settings(object):
     DIM = (6, 13)
     N_EXAMPLES = 10
     LOCATIONS = [(x,y) for x in range(DIM[0]) for y in range(DIM[1])]
+    GRID_CMAP = matplotlib.colors.ListedColormap(['dimgray', 'silver'])
 
 settings = Settings()
 
@@ -19,6 +21,17 @@ def generate_ground_truth():
     row = np.matrix(np.ones(d[1]))
     row[0, 0:(d[1]/2)] = 0
     return col * row
+
+def plot_ground_truth(ground_truth):
+    plt.figure()
+
+    plt.axis('off')
+    plt.title("Ground truth")
+    plt.imshow(ground_truth, cmap=settings.GRID_CMAP, interpolation='none', origin='upper')
+
+    fig = plt.gcf()
+    fig.set_size_inches(6, 4)
+    fig.savefig('ground-truth.png', dpi=100)
 
 # Run active learning with given teacher. User behaves according to user model.
 def run(user_model, teacher):
@@ -35,7 +48,8 @@ def run(user_model, teacher):
         print prediction
 
     history.plot(filename="%s-%s" % (user_model.name, teacher.name),
-        title="Active learning with %s user model, %s teacher" % (user_model.name, teacher.name))
+        title="Active learning with %s user model, %s teacher" % (user_model.name, teacher.name),
+        settings=settings)
     return history
 
 # Compute 0-1 loss between prediction and ground truth, averaged over all grid points.
@@ -82,6 +96,8 @@ def compare(teacher_histories, ground_truth, user_model):
 # Simulate user behaving exactly according to user model. Compare teachers.
 def eval_teachers_assuming_user_model():
     ground_truth = generate_ground_truth()
+    plot_ground_truth(ground_truth)
+
     user_model = SVMUserModel(settings)
     random_teacher = RandomTeacher(settings, ground_truth)
     optimal_teacher = OptimalTeacher(settings, ground_truth, user_model)

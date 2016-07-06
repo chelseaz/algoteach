@@ -1,10 +1,7 @@
 #!/usr/bin/env python
 
 import math
-import matplotlib
 import matplotlib.pyplot as plt
-
-CMAP = matplotlib.colors.ListedColormap(['dimgray', 'silver'])
 
 class History(object):
     def __init__(self, user_prior):
@@ -18,20 +15,20 @@ class History(object):
     def add_prediction(self, prediction):
         self.predictions.append(prediction)
 
-    def plot_iteration(self, plt, i):
+    def plot_iteration(self, plt, i, settings):
         prediction = self.predictions[i]
 
         plt.axis('off')
         plt.title("Prediction after %d iterations" % (i+1))
         # label=0 is dark gray, label=1 is silver
-        plt.imshow(prediction, cmap=CMAP, interpolation='none', origin='upper')
+        plt.imshow(prediction, cmap=settings.GRID_CMAP, interpolation='none', origin='upper')
         for j in range(i+1):
             loc, label = self.examples[j]
             y, x = loc
             c = 'maroon' if j == i else 'black'
             plt.annotate(s=str(j+1), xy=(x, y), color=c)
 
-    def plot(self, filename, title):
+    def plot(self, filename, title, settings):
         plt.figure()
         plt.suptitle(title)
 
@@ -40,7 +37,7 @@ class History(object):
         nrow = int(math.ceil(N/2.0))
         for fignum, i in enumerate(valid_iter):
             plt.subplot(nrow, 2, fignum+1)
-            self.plot_iteration(plt, i)
+            self.plot_iteration(plt, i, settings)
 
         fig = plt.gcf()
         fig.set_size_inches(8, 12)
