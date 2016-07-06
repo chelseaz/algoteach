@@ -42,9 +42,11 @@ def run(settings, user_model, teacher):
         # print "examples: " + str(history.examples)
         # print prediction
 
-    history.plot(filename="%s-%s" % (user_model.name, teacher.name),
-        title="Active learning with %s user model, %s teacher" % (user_model.name, teacher.name),
-        settings=settings)
+    if len(settings.DIM) == 2:
+        # plotting history only supported for two dimensions
+        history.plot(filename="%s-%s" % (user_model.name, teacher.name),
+            title="Active learning with %s user model, %s teacher" % (user_model.name, teacher.name),
+            settings=settings)
     return history
 
 def compute_teacher_accuracies(settings, user_model, teacher, ground_truth):
@@ -94,7 +96,7 @@ def plot_teacher_accuracy(teacher_accuracies, filename, title):
 
 # Simulate user behaving exactly according to user model. Compare teachers.
 def eval_teachers_assuming_user_model():
-    settings = Settings(DIM=(6,13), N_EXAMPLES=16)
+    settings = Settings(DIM=(4, 4, 4), N_EXAMPLES=27)
 
     ground_truth = GroundTruth(settings)
     ground_truth.plot()

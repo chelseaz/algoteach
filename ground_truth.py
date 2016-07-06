@@ -7,12 +7,15 @@ class GroundTruth(object):
     def __init__(self, settings):
         self.settings = settings
 
+        self.grid = np.empty(settings.DIM)
+        for loc in settings.LOCATIONS:
+            self.grid[loc] = self.classify(loc)
+
+    def classify(self, loc):
         # left half is 0, right half is 1
-        d = settings.DIM
-        col = np.matrix(np.ones(d[0])).transpose()
-        row = np.matrix(np.ones(d[1]))
-        row[0, 0:(d[1]/2)] = 0
-        self.grid = col * row
+        w = np.array([0, 1, 0])
+        b = 2
+        return np.dot(w, np.array(loc)) - b < 0
 
     def at(self, loc):
         return self.grid[loc]
