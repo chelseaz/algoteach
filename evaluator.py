@@ -72,7 +72,7 @@ def eval_teachers_assuming_user_model():
     random_teacher = RandomTeacher(settings, ground_truth)
     optimal_teacher = OptimalTeacher(settings, ground_truth, user_model)
 
-    teachers = [random_teacher]#, optimal_teacher]
+    teachers = [random_teacher, optimal_teacher]
     teacher_histories = dict(
         [(teacher.name, run(user_model, teacher)) for teacher in teachers])
     compare(teacher_histories, ground_truth, user_model)

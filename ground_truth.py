@@ -33,7 +33,7 @@ class GroundTruth(object):
     # Also equals 1 - accuracy, where accuracy = (TP + TN) / n_grid_pts
     def prediction_error(self, prediction):
         if prediction is None:
-            return None
+            return 1.0
 
         d = self.settings.DIM
         n_grid_pts = d[0] * d[1]
