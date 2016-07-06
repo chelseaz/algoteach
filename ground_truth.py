@@ -28,6 +28,8 @@ class GroundTruth(object):
         fig.set_size_inches(6, 4)
         fig.savefig('ground-truth.png', dpi=100)
 
+        plt.close()
+
     # Compute 0-1 loss between prediction and ground truth, averaged over all grid points.
     # This is the risk if all grid points are weighted equally.
     # Also equals 1 - accuracy, where accuracy = (TP + TN) / n_grid_pts

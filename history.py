@@ -42,3 +42,5 @@ class History(object):
         fig = plt.gcf()
         fig.set_size_inches(8, 12)
         fig.savefig('%s.png' % filename, dpi=100)
+
+        plt.close()
