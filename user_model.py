@@ -34,7 +34,10 @@ class SVMUserModel(UserModel):
 
         model.fit(X, y)
         prediction_list = model.predict(self.settings.LOCATIONS)
+        
+        prediction_array = np.empty(self.settings.DIM)
+        for loc, pred in zip(self.settings.LOCATIONS, prediction_list):
+            prediction_array[loc] = pred
 
-        d = self.settings.DIM
-        return np.matrix(prediction_list).reshape((d[0], d[1]))
+        return prediction_array
 

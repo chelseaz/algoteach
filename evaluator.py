@@ -9,10 +9,17 @@ from history import History
 from ground_truth import GroundTruth, error_to_accuracy
 
 class Settings(object):
-    DIM = (6, 13)
-    N_EXAMPLES = 16
-    LOCATIONS = [(x,y) for x in range(DIM[0]) for y in range(DIM[1])]
-    GRID_CMAP = matplotlib.colors.ListedColormap(['dimgray', 'silver'])
+    def __init__(self, DIM, N_EXAMPLES):
+        self.DIM = DIM
+        self.N_EXAMPLES = N_EXAMPLES
+        self.LOCATIONS = self.compute_locations()
+        self.GRID_CMAP = matplotlib.colors.ListedColormap(['dimgray', 'silver'])
+
+    def compute_locations(self):
+        D = len(self.DIM)
+        coords_by_dim = [range(b) for b in self.DIM]
+        locations = np.vstack(np.meshgrid(*coords_by_dim)).reshape(D, -1).T
+        return [tuple(loc) for loc in locations]
 
 
 class TeacherConfig(object):
@@ -87,7 +94,7 @@ def plot_teacher_accuracy(teacher_accuracies, filename, title):
 
 # Simulate user behaving exactly according to user model. Compare teachers.
 def eval_teachers_assuming_user_model():
-    settings = Settings()
+    settings = Settings(DIM=(6,13), N_EXAMPLES=16)
 
     ground_truth = GroundTruth(settings)
     ground_truth.plot()
@@ -105,6 +112,7 @@ def eval_teachers_assuming_user_model():
     teacher_accuracies = aggregate_teacher_accuracies(settings, user_model, teacher_configs, ground_truth)
     plot_teacher_accuracy(teacher_accuracies, filename='%s-teacher-accuracy' % user_model.name,
         title="Comparison of teacher accuracy with %s user model" % user_model.name)
+
 
 if __name__ == "__main__":
     eval_teachers_assuming_user_model()
