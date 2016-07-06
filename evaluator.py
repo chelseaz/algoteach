@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import numpy as np
+import matplotlib.pyplot as plt
 from user_model import SVMUserModel
 from teacher import RandomTeacher, OptimalTeacher
 from history import History
@@ -37,8 +38,46 @@ def run(user_model, teacher):
         title="Active learning with %s user model, %s teacher" % (user_model.name, teacher.name))
     return history
 
-def compare(teacher_preds):
-    pass
+# Compute 0-1 loss between prediction and ground truth, averaged over all grid points.
+# This is the risk if all grid points are weighted equally.
+# Also equals 1 - accuracy, where accuracy = (TP + TN) / n_grid_pts
+def compute_error(prediction, ground_truth):
+    if prediction is None:
+        return None
+
+    d = settings.DIM
+    n_grid_pts = d[0] * d[1]
+    return np.sum(abs(prediction - ground_truth)) / n_grid_pts
+
+def error_to_accuracy(error):
+    return 0 if error is None else 1 - error
+
+def plot_teacher_accuracy(teacher_errors, filename, title):
+    plt.figure()
+
+    for name, errors in teacher_errors.items():
+        accuracies = [error_to_accuracy(error) for error in errors]
+        plt.plot(range(1, len(accuracies)+1), accuracies, label=name, linestyle='-', linewidth=2)
+
+    plt.axis([1, 10, 0, 1.1])
+    plt.xlabel("Teaching examples")
+    plt.ylabel("Accuracy")
+    plt.title(title)
+    plt.legend(loc='lower right')
+
+    fig = plt.gcf()
+    fig.set_size_inches(6, 6)
+    fig.savefig('%s.png' % filename, dpi=100)
+
+# Compute prediction error over course of training for each teacher, and plot together.
+def compare(teacher_histories, ground_truth, user_model):
+    teacher_errors = dict()
+    for name, history in teacher_histories.items():
+        teacher_errors[name] = [compute_error(prediction, ground_truth) for prediction in history.predictions]
+
+    plot_teacher_accuracy(teacher_errors, filename='%s-teacher-accuracy' % user_model.name,
+        title="Comparison of teacher accuracy with %s user model" % user_model.name)
+    return teacher_errors
 
 # Simulate user behaving exactly according to user model. Compare teachers.
 def eval_teachers_assuming_user_model():
@@ -47,8 +86,10 @@ def eval_teachers_assuming_user_model():
     random_teacher = RandomTeacher(settings, ground_truth)
     optimal_teacher = OptimalTeacher(settings, ground_truth, user_model)
 
-    compare(dict(random=run(user_model, random_teacher),
-                 optimal=run(user_model, optimal_teacher)))
+    teachers = [random_teacher]#, optimal_teacher]
+    teacher_histories = dict(
+        [(teacher.name, run(user_model, teacher)) for teacher in teachers])
+    compare(teacher_histories, ground_truth, user_model)
 
 if __name__ == "__main__":
     eval_teachers_assuming_user_model()
