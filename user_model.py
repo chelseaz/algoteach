@@ -9,13 +9,13 @@ class UserModel(object):
         self.prior = None
 
     # predict label of all locations
-    def predict_grid(self, history):
+    def predict_grid(self, examples):
         predict = lambda p: 1 if p >= 0.5 else 0
         vpredict = np.vectorize(predict)
-        return vpredict(self.evaluate_grid(history))
+        return vpredict(self.evaluate_grid(examples))
 
     # get probability of label 1 for all locations
-    def evaluate_grid(self, history):
+    def evaluate_grid(self, examples):
         pass
 
 class SVMUserModel(UserModel):
@@ -23,11 +23,11 @@ class SVMUserModel(UserModel):
         super(self.__class__, self).__init__(settings)
         self.name = "SVM"
 
-    def predict_grid(self, history):
-        # fit SVM to all examples in history
+    def predict_grid(self, examples):
+        # fit SVM to all examples
         model = svm.SVC(kernel='linear')  # default params include RBF kernel
-        X = [loc for (loc, _) in history.examples]
-        y = [label for (_, label) in history.examples]
+        X = [loc for (loc, _) in examples]
+        y = [label for (_, label) in examples]
         if len(set(y)) < 2:
             # we don't have examples for both labels yet
             return None

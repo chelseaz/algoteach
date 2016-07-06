@@ -2,9 +2,11 @@
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+
 from user_model import SVMUserModel
 from teacher import RandomTeacher, OptimalTeacher
 from history import History
+from ground_truth import GroundTruth, error_to_accuracy
 
 class Settings(object):
     DIM = (6, 13)
@@ -14,24 +16,6 @@ class Settings(object):
 
 settings = Settings()
 
-def generate_ground_truth():
-    # left half is 0, right half is 1
-    d = settings.DIM
-    col = np.matrix(np.ones(d[0])).transpose()
-    row = np.matrix(np.ones(d[1]))
-    row[0, 0:(d[1]/2)] = 0
-    return col * row
-
-def plot_ground_truth(ground_truth):
-    plt.figure()
-
-    plt.axis('off')
-    plt.title("Ground truth")
-    plt.imshow(ground_truth, cmap=settings.GRID_CMAP, interpolation='none', origin='upper')
-
-    fig = plt.gcf()
-    fig.set_size_inches(6, 4)
-    fig.savefig('ground-truth.png', dpi=100)
 
 # Run active learning with given teacher. User behaves according to user model.
 def run(user_model, teacher):
@@ -42,7 +26,7 @@ def run(user_model, teacher):
     for i in range(settings.N_EXAMPLES):
         example = teacher.next_example(history)
         history.add_example(example)
-        prediction = user_model.predict_grid(history)
+        prediction = user_model.predict_grid(history.examples)
         history.add_prediction(prediction)
         print "examples: " + str(history.examples)
         print prediction
@@ -51,20 +35,6 @@ def run(user_model, teacher):
         title="Active learning with %s user model, %s teacher" % (user_model.name, teacher.name),
         settings=settings)
     return history
-
-# Compute 0-1 loss between prediction and ground truth, averaged over all grid points.
-# This is the risk if all grid points are weighted equally.
-# Also equals 1 - accuracy, where accuracy = (TP + TN) / n_grid_pts
-def compute_error(prediction, ground_truth):
-    if prediction is None:
-        return None
-
-    d = settings.DIM
-    n_grid_pts = d[0] * d[1]
-    return np.sum(abs(prediction - ground_truth)) / n_grid_pts
-
-def error_to_accuracy(error):
-    return 0 if error is None else 1 - error
 
 def plot_teacher_accuracy(teacher_errors, filename, title):
     plt.figure()
@@ -87,7 +57,7 @@ def plot_teacher_accuracy(teacher_errors, filename, title):
 def compare(teacher_histories, ground_truth, user_model):
     teacher_errors = dict()
     for name, history in teacher_histories.items():
-        teacher_errors[name] = [compute_error(prediction, ground_truth) for prediction in history.predictions]
+        teacher_errors[name] = [ground_truth.prediction_error(prediction) for prediction in history.predictions]
 
     plot_teacher_accuracy(teacher_errors, filename='%s-teacher-accuracy' % user_model.name,
         title="Comparison of teacher accuracy with %s user model" % user_model.name)
@@ -95,8 +65,8 @@ def compare(teacher_histories, ground_truth, user_model):
 
 # Simulate user behaving exactly according to user model. Compare teachers.
 def eval_teachers_assuming_user_model():
-    ground_truth = generate_ground_truth()
-    plot_ground_truth(ground_truth)
+    ground_truth = GroundTruth(settings)
+    ground_truth.plot()
 
     user_model = SVMUserModel(settings)
     random_teacher = RandomTeacher(settings, ground_truth)
