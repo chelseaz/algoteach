@@ -4,13 +4,13 @@ import matplotlib
 import matplotlib.pyplot as plt
 
 from user_model import SVMUserModel
-from teacher import RandomTeacher, OptimalTeacher
+from teacher import RandomTeacher, GridTeacher, OptimalTeacher
 from history import History
 from ground_truth import GroundTruth, error_to_accuracy
 
 class Settings(object):
     DIM = (6, 13)
-    N_EXAMPLES = 10
+    N_EXAMPLES = 16
     LOCATIONS = [(x,y) for x in range(DIM[0]) for y in range(DIM[1])]
     GRID_CMAP = matplotlib.colors.ListedColormap(['dimgray', 'silver'])
 
@@ -43,7 +43,9 @@ def plot_teacher_accuracy(teacher_errors, filename, title):
         accuracies = [error_to_accuracy(error) for error in errors]
         plt.plot(range(1, len(accuracies)+1), accuracies, label=name, linestyle='-', linewidth=2)
 
-    plt.axis([1, 10, 0, 1.1])
+    axes = plt.gca()
+    axes.set_ylim([0, 1.1])
+
     plt.xlabel("Teaching examples")
     plt.ylabel("Accuracy")
     plt.title(title)
@@ -70,9 +72,10 @@ def eval_teachers_assuming_user_model():
 
     user_model = SVMUserModel(settings)
     random_teacher = RandomTeacher(settings, ground_truth)
+    grid_teacher = GridTeacher(settings, ground_truth)
     optimal_teacher = OptimalTeacher(settings, ground_truth, user_model)
 
-    teachers = [random_teacher, optimal_teacher]
+    teachers = [random_teacher, grid_teacher, optimal_teacher]
     teacher_histories = dict(
         [(teacher.name, run(user_model, teacher)) for teacher in teachers])
     compare(teacher_histories, ground_truth, user_model)
