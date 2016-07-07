@@ -21,6 +21,9 @@ class Settings(object):
         locations = np.vstack(np.meshgrid(*coords_by_dim)).reshape(D, -1).T
         return [tuple(loc) for loc in locations]
 
+    def dim_string(self):
+        return 'x'.join([str(b) for b in self.DIM])
+
 
 class TeacherConfig(object):
     def __init__(self, teacher, reps):
@@ -44,8 +47,9 @@ def run(settings, user_model, teacher):
 
     if len(settings.DIM) == 2:
         # plotting history only supported for two dimensions
-        history.plot(filename="%s-%s" % (user_model.name, teacher.name),
-            title="Active learning with %s user model, %s teacher" % (user_model.name, teacher.name),
+        history.plot(filename="%s-%s-%s" % (user_model.name, teacher.name, settings.dim_string()),
+            title="Active learning with %s user model, %s teacher\n%s grid" % \
+                (user_model.name, teacher.name, settings.dim_string()),
             settings=settings)
     return history
 
@@ -67,9 +71,9 @@ def aggregate_teacher_accuracies(settings, user_model, teacher_configs, ground_t
             all_reps = np.vstack([compute_teacher_accuracies(
                 settings, user_model, config.teacher, ground_truth) for _ in range(config.reps)])
             teacher_accuracies += [
+                ('%s-p95' % teacher_name, np.percentile(all_reps, 95, axis=0)),
                 ('%s-median' % teacher_name, np.percentile(all_reps, 50, axis=0)),
-                ('%s-p05' % teacher_name, np.percentile(all_reps, 5, axis=0)),
-                ('%s-p95' % teacher_name, np.percentile(all_reps, 95, axis=0))
+                ('%s-p05' % teacher_name, np.percentile(all_reps, 5, axis=0))
             ]
 
     return teacher_accuracies
@@ -89,17 +93,19 @@ def plot_teacher_accuracy(teacher_accuracies, filename, title):
     plt.legend(loc='lower right')
 
     fig = plt.gcf()
-    fig.set_size_inches(6, 6)
+    fig.set_size_inches(8, 8)
     fig.savefig('%s.png' % filename, dpi=100)
 
     plt.close()
 
 # Simulate user behaving exactly according to user model. Compare teachers.
 def eval_teachers_assuming_user_model():
-    settings = Settings(DIM=(4, 4, 4), N_EXAMPLES=27)
+    settings = Settings(DIM=(6, 13), N_EXAMPLES=16)
 
     ground_truth = GroundTruth(settings)
-    ground_truth.plot()
+    if len(settings.DIM) == 2:
+        # plotting ground truth only supported for two dimensions
+        ground_truth.plot(filename='ground-truth-%s' % settings.dim_string())
 
     user_model = SVMUserModel(settings)
     random_teacher = RandomTeacher(settings, ground_truth)
@@ -112,8 +118,11 @@ def eval_teachers_assuming_user_model():
         TeacherConfig(optimal_teacher, 1)
     ]
     teacher_accuracies = aggregate_teacher_accuracies(settings, user_model, teacher_configs, ground_truth)
-    plot_teacher_accuracy(teacher_accuracies, filename='%s-teacher-accuracy' % user_model.name,
-        title="Comparison of teacher accuracy with %s user model" % user_model.name)
+    plot_teacher_accuracy(teacher_accuracies, 
+        filename='%s-teacher-accuracy-%s' % (user_model.name, settings.dim_string()),
+        title="Comparison of teacher accuracy with %s user model\n%s grid" % \
+            (user_model.name, settings.dim_string())
+    )
 
 
 if __name__ == "__main__":

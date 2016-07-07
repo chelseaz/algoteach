@@ -11,16 +11,20 @@ class GroundTruth(object):
         for loc in settings.LOCATIONS:
             self.grid[loc] = self.classify(loc)
 
+        print self.grid
+
     def classify(self, loc):
-        # left half is 0, right half is 1
-        w = np.array([0, 1, 0])
-        b = 2
+        # Linear boundary depends on single feature
+        active_dim = max(enumerate(self.settings.DIM), key=lambda x: x[1])[0]
+        w = np.zeros(len(self.settings.DIM))
+        w[active_dim] = 1
+        b = self.settings.DIM[active_dim] / 2
         return np.dot(w, np.array(loc)) - b < 0
 
     def at(self, loc):
         return self.grid[loc]
 
-    def plot(self):
+    def plot(self, filename):
         plt.figure()
 
         plt.axis('off')
@@ -29,7 +33,7 @@ class GroundTruth(object):
 
         fig = plt.gcf()
         fig.set_size_inches(6, 4)
-        fig.savefig('ground-truth.png', dpi=100)
+        fig.savefig('%s.png' % filename, dpi=100)
 
         plt.close()
 
