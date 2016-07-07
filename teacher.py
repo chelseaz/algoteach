@@ -18,7 +18,7 @@ class Teacher(object):
         return self.locations - shown_locs
 
     def next_example(self, history):
-        pass
+        raise NotImplementedError
 
 
 class RandomTeacher(Teacher):
@@ -89,7 +89,7 @@ class OptimalTeacher(Teacher):
         return argmin(example_seq_to_error.items())
 
     def next_example_beam_search(self, history):
-        pass
+        raise NotImplementedError
 
 
 def argmin(kv):

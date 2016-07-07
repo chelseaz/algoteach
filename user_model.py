@@ -16,7 +16,7 @@ class UserModel(object):
 
     # get probability of label 1 for all locations
     def evaluate_grid(self, examples):
-        pass
+        raise NotImplementedError
 
 class SVMUserModel(UserModel):
     def __init__(self, settings):
@@ -34,7 +34,7 @@ class SVMUserModel(UserModel):
 
         model.fit(X, y)
         prediction_list = model.predict(self.settings.LOCATIONS)
-        
+
         prediction_array = np.empty(self.settings.DIM)
         for loc, pred in zip(self.settings.LOCATIONS, prediction_list):
             prediction_array[loc] = pred

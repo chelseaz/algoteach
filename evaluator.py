@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from user_model import SVMUserModel
 from teacher import RandomTeacher, GridTeacher, OptimalTeacher
 from history import History
-from ground_truth import GroundTruth, error_to_accuracy
+from ground_truth import SimpleLinearGroundTruth, GeneralLinearGroundTruth, error_to_accuracy
 
 class Settings(object):
     def __init__(self, DIM, N_EXAMPLES):
@@ -32,7 +32,7 @@ class TeacherConfig(object):
 
 
 # Run active learning with given teacher. User behaves according to user model.
-def run(settings, user_model, teacher):
+def run(settings, user_model, teacher, ground_truth):
     print "Running active learning with %s and %s" % \
         (user_model.__class__.__name__, teacher.__class__.__name__)
 
@@ -48,13 +48,13 @@ def run(settings, user_model, teacher):
     if len(settings.DIM) == 2:
         # plotting history only supported for two dimensions
         history.plot(filename="%s-%s-%s" % (user_model.name, teacher.name, settings.dim_string()),
-            title="Active learning with %s user model, %s teacher\n%s grid" % \
-                (user_model.name, teacher.name, settings.dim_string()),
+            title="Active learning with %s user model, %s teacher\n%s grid | Boundary: %s" % \
+                (user_model.name, teacher.name, settings.dim_string(), str(ground_truth)),
             settings=settings)
     return history
 
 def compute_teacher_accuracies(settings, user_model, teacher, ground_truth):
-    history = run(settings, user_model, teacher)
+    history = run(settings, user_model, teacher, ground_truth)
     errors = [ground_truth.prediction_error(prediction) for prediction in history.predictions]
     return [error_to_accuracy(error) for error in errors]
 
@@ -102,7 +102,7 @@ def plot_teacher_accuracy(teacher_accuracies, filename, title):
 def eval_teachers_assuming_user_model():
     settings = Settings(DIM=(6, 13), N_EXAMPLES=16)
 
-    ground_truth = GroundTruth(settings)
+    ground_truth = GeneralLinearGroundTruth(settings)
     if len(settings.DIM) == 2:
         # plotting ground truth only supported for two dimensions
         ground_truth.plot(filename='ground-truth-%s' % settings.dim_string())
@@ -113,15 +113,15 @@ def eval_teachers_assuming_user_model():
     optimal_teacher = OptimalTeacher(settings, ground_truth, user_model)
 
     teacher_configs = [
-        TeacherConfig(random_teacher, 10),
-        TeacherConfig(grid_teacher, 10),
+        TeacherConfig(random_teacher, 20),
+        TeacherConfig(grid_teacher, 20),
         TeacherConfig(optimal_teacher, 1)
     ]
     teacher_accuracies = aggregate_teacher_accuracies(settings, user_model, teacher_configs, ground_truth)
     plot_teacher_accuracy(teacher_accuracies, 
         filename='%s-teacher-accuracy-%s' % (user_model.name, settings.dim_string()),
-        title="Comparison of teacher accuracy with %s user model\n%s grid" % \
-            (user_model.name, settings.dim_string())
+        title="Comparison of teacher accuracy with %s user model\n%s grid | Boundary: %s" % \
+            (user_model.name, settings.dim_string(), str(ground_truth))
     )
 
 
