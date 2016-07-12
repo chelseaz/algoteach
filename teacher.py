@@ -6,34 +6,38 @@ import numpy as np
 import random
 
 class Teacher(object):
-    def __init__(self, settings, ground_truth):
+    def __init__(self, settings, ground_truth, with_replacement=False):
         self.name = "base"
         self.settings = settings
         self.ground_truth = ground_truth
+        self.with_replacement = with_replacement
         self.locations = set(settings.LOCATIONS)  # immutable
 
-    # set of locations that have not been shown yet
-    def remaining_locs(self, history):
-        shown_locs = set([loc for (loc, _) in history.examples])
-        return self.locations - shown_locs
+    # set of locations that have not been shown yet, if sampling without replacement
+    def allowable_locs(self, history):
+        if self.with_replacement:
+            return self.locations
+        else:
+            shown_locs = set([loc for (loc, _) in history.examples])
+            return self.locations - shown_locs
 
     def next_example(self, history):
         raise NotImplementedError
 
 
 class RandomTeacher(Teacher):
-    def __init__(self, settings, ground_truth):
-        super(self.__class__, self).__init__(settings, ground_truth)
+    def __init__(self, settings, ground_truth, with_replacement=False):
+        super(self.__class__, self).__init__(settings, ground_truth, with_replacement)
         self.name = "random"
 
     def next_example(self, history):
-        next_loc = random.sample(self.remaining_locs(history), 1)[0]
+        next_loc = random.sample(self.allowable_locs(history), 1)[0]
         return (next_loc, self.ground_truth.at(next_loc))
 
 
 class GridTeacher(Teacher):
-    def __init__(self, settings, ground_truth):
-        super(self.__class__, self).__init__(settings, ground_truth)
+    def __init__(self, settings, ground_truth, with_replacement=False):
+        super(self.__class__, self).__init__(settings, ground_truth, with_replacement)
         self.name = "grid"
         self.example_locs = self.compute_example_locs()
 
@@ -46,20 +50,24 @@ class GridTeacher(Teacher):
         example_locs = np.vstack(np.meshgrid(*coords_by_dim)).reshape(D, -1).T
         return set([tuple(loc) for loc in example_locs])
 
-    # Set of precomputed grid sampling locations that have not been shown yet
-    def remaining_locs(self, history):
-        shown_locs = set([loc for (loc, _) in history.examples])
-        return self.example_locs - shown_locs
+    # Set of precomputed grid sampling locations that have not been shown yet,
+    # if sampling without replacement
+    def allowable_locs(self, history):
+        if self.with_replacement:
+            return self.example_locs
+        else:
+            shown_locs = set([loc for (loc, _) in history.examples])
+            return self.example_locs - shown_locs
 
-    # Randomly sample from remaining grid sampling locations.
+    # Randomly sample from allowable grid sampling locations.
     def next_example(self, history):
-        next_loc = random.sample(self.remaining_locs(history), 1)[0]
+        next_loc = random.sample(self.allowable_locs(history), 1)[0]
         return (next_loc, self.ground_truth.at(next_loc))
 
 
 class OptimalTeacher(Teacher):
-    def __init__(self, settings, ground_truth, user_model):
-        super(self.__class__, self).__init__(settings, ground_truth)
+    def __init__(self, settings, ground_truth, user_model, with_replacement=False):
+        super(self.__class__, self).__init__(settings, ground_truth, with_replacement)
         self.name = "optimal"
         self.user_model = user_model
 
@@ -68,7 +76,7 @@ class OptimalTeacher(Teacher):
         #return next_example_beam_search(self, history)
 
     def next_example_rhc(self, history, horizon=2):
-        example_seqs = itertools.combinations(self.remaining_locs(history), horizon)
+        example_seqs = itertools.combinations(self.allowable_locs(history), horizon)
         # choose best combination of next examples
         best_seq = self.best_example_seq(example_seqs, history)
         # of examples in best combination, choose one

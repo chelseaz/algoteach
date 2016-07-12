@@ -63,7 +63,7 @@ class LinearGroundTruth(GroundTruth):
         raise NotImplementedError
 
     def __str__(self):
-        return "w=%s, b=%d" % (str(self.w), self.b)
+        return "w=%s, b=%.2f" % (str(self.w), self.b)
 
 
 class SimpleLinearGroundTruth(LinearGroundTruth):
@@ -78,7 +78,7 @@ class SimpleLinearGroundTruth(LinearGroundTruth):
 class GeneralLinearGroundTruth(LinearGroundTruth):
     def set_boundary(self):
         # All features weights are sampled uniformly from [-1, 1]
-        self.w = np.random.uniform(-1, 1, len(self.settings.DIM))
+        self.w = np.round(np.random.uniform(-1, 1, len(self.settings.DIM)), 2)
         # line should pass through center of grid
         origin = np.array([b/2 for b in self.settings.DIM])
-        self.b = np.dot(self.w, origin)
+        self.b = round(np.dot(self.w, origin), 2)

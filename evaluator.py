@@ -100,7 +100,7 @@ def plot_teacher_accuracy(teacher_accuracies, filename, title):
 
 # Simulate user behaving exactly according to user model. Compare teachers.
 def eval_teachers_assuming_user_model():
-    settings = Settings(DIM=(6, 13), N_EXAMPLES=16)
+    settings = Settings(DIM=(3, 3, 3, 3), N_EXAMPLES=16)
 
     ground_truth = GeneralLinearGroundTruth(settings)
     if len(settings.DIM) == 2:
@@ -108,9 +108,9 @@ def eval_teachers_assuming_user_model():
         ground_truth.plot(filename='ground-truth-%s' % settings.dim_string())
 
     user_model = SVMUserModel(settings)
-    random_teacher = RandomTeacher(settings, ground_truth)
-    grid_teacher = GridTeacher(settings, ground_truth)
-    optimal_teacher = OptimalTeacher(settings, ground_truth, user_model)
+    random_teacher = RandomTeacher(settings, ground_truth, with_replacement=True)
+    grid_teacher = GridTeacher(settings, ground_truth, with_replacement=True)
+    optimal_teacher = OptimalTeacher(settings, ground_truth, user_model, with_replacement=True)
 
     teacher_configs = [
         TeacherConfig(random_teacher, 20),
