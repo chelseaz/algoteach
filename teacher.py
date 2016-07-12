@@ -50,14 +50,11 @@ class GridTeacher(Teacher):
         example_locs = np.vstack(np.meshgrid(*coords_by_dim)).reshape(D, -1).T
         return set([tuple(loc) for loc in example_locs])
 
-    # Set of precomputed grid sampling locations that have not been shown yet,
-    # if sampling without replacement
+    # Set of precomputed grid sampling locations that have not been shown yet.
+    # Always sample without replacement.
     def allowable_locs(self, history):
-        if self.with_replacement:
-            return self.example_locs
-        else:
-            shown_locs = set([loc for (loc, _) in history.examples])
-            return self.example_locs - shown_locs
+        shown_locs = set([loc for (loc, _) in history.examples])
+        return self.example_locs - shown_locs
 
     # Randomly sample from allowable grid sampling locations.
     def next_example(self, history):

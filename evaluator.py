@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
 
-from user_model import SVMUserModel
+from user_model import LinearSVMUserModel, RBFSVMUserModel
 from teacher import RandomTeacher, GridTeacher, OptimalTeacher
 from history import History
 from ground_truth import SimpleLinearGroundTruth, GeneralLinearGroundTruth, error_to_accuracy
@@ -100,14 +100,14 @@ def plot_teacher_accuracy(teacher_accuracies, filename, title):
 
 # Simulate user behaving exactly according to user model. Compare teachers.
 def eval_teachers_assuming_user_model():
-    settings = Settings(DIM=(3, 3, 3, 3), N_EXAMPLES=16)
+    settings = Settings(DIM=(6, 13), N_EXAMPLES=16)
 
     ground_truth = GeneralLinearGroundTruth(settings)
     if len(settings.DIM) == 2:
         # plotting ground truth only supported for two dimensions
         ground_truth.plot(filename='ground-truth-%s' % settings.dim_string())
 
-    user_model = SVMUserModel(settings)
+    user_model = RBFSVMUserModel(settings)
     random_teacher = RandomTeacher(settings, ground_truth, with_replacement=True)
     grid_teacher = GridTeacher(settings, ground_truth, with_replacement=True)
     optimal_teacher = OptimalTeacher(settings, ground_truth, user_model, with_replacement=True)

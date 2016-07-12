@@ -19,13 +19,9 @@ class UserModel(object):
         raise NotImplementedError
 
 class SVMUserModel(UserModel):
-    def __init__(self, settings):
-        super(self.__class__, self).__init__(settings)
-        self.name = "SVM"
-
     def predict_grid(self, examples):
         # fit SVM to all examples
-        model = svm.SVC(kernel='linear')  # default params include RBF kernel
+        model = self.get_model()
         X = [loc for (loc, _) in examples]
         y = [label for (_, label) in examples]
         if len(set(y)) < 2:
@@ -41,3 +37,23 @@ class SVMUserModel(UserModel):
 
         return prediction_array
 
+    def get_model(self):
+        raise NotImplementedError
+
+
+class LinearSVMUserModel(SVMUserModel):
+    def __init__(self, settings):
+        super(self.__class__, self).__init__(settings)
+        self.name = "linear SVM"
+
+    def get_model(self):
+        return svm.SVC(kernel='linear')
+
+
+class RBFSVMUserModel(SVMUserModel):
+    def __init__(self, settings):
+        super(self.__class__, self).__init__(settings)
+        self.name = "RBF SVM"
+
+    def get_model(self):
+        return svm.SVC(kernel='rbf', C=1.0, gamma=0.1)
