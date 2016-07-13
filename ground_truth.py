@@ -17,7 +17,7 @@ class GroundTruth(object):
         for loc in self.settings.LOCATIONS:
             self.grid[loc] = self.classify(loc)
 
-        print self.grid
+        print self.grid.T
 
     def classify(self, loc):
         raise NotImplementedError
@@ -30,7 +30,7 @@ class GroundTruth(object):
 
         plt.axis('off')
         plt.title("Ground truth: %s grid with\n%s" % (self.settings.dim_string(), str(self)))
-        plt.imshow(self.grid, cmap=self.settings.GRID_CMAP, interpolation='none', origin='upper')
+        plt.imshow(self.grid.T, cmap=self.settings.GRID_CMAP, interpolation='none', origin='upper')
 
         fig = plt.gcf()
         fig.set_size_inches(6, 4)

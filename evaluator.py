@@ -4,6 +4,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import shutil
 
 from user_model import LinearSVMUserModel, RBFSVMUserModel
 from teacher import RandomTeacher, GridTeacher, OptimalTeacher
@@ -12,10 +13,11 @@ from ground_truth import error_to_accuracy, SimpleLinearGroundTruth, GeneralLine
     SimplePolynomialGroundTruth
 
 class Settings(object):
-    def __init__(self, DIM, N_EXAMPLES, RUN_DIR):
+    def __init__(self, DIM, N_EXAMPLES, RUN_DIR, TEACHER_REPS):
         self.DIM = DIM
         self.N_EXAMPLES = N_EXAMPLES
         self.RUN_DIR = RUN_DIR
+        self.TEACHER_REPS = TEACHER_REPS
         self.LOCATIONS = self.compute_locations()
         self.GRID_CMAP = matplotlib.colors.ListedColormap(['dimgray', 'silver'])
 
@@ -109,13 +111,16 @@ def eval_omniscient_teachers(ground_truth, user_model, settings):
         # plotting ground truth only supported for two dimensions
         ground_truth.plot()
 
+    if settings.TEACHER_REPS <= 0:
+        return
+
     random_teacher = RandomTeacher(settings, ground_truth, with_replacement=True)
     grid_teacher = GridTeacher(settings, ground_truth, with_replacement=True)
     optimal_teacher = OptimalTeacher(settings, ground_truth, user_model, with_replacement=True)
 
     teacher_configs = [
-        TeacherConfig(random_teacher, 20),
-        TeacherConfig(grid_teacher, 20),
+        TeacherConfig(random_teacher, settings.TEACHER_REPS),
+        TeacherConfig(grid_teacher, settings.TEACHER_REPS),
         TeacherConfig(optimal_teacher, 1)
     ]
     teacher_accuracies = aggregate_teacher_accuracies(settings, user_model, teacher_configs, ground_truth)
@@ -127,10 +132,13 @@ def eval_omniscient_teachers(ground_truth, user_model, settings):
 
 
 def all_simulations():
-    run_dir = datetime.datetime.now().strftime("%Y%m%d %H%m")
+    run_dir = datetime.datetime.now().strftime("%Y%m%d %H%M")
+    shutil.rmtree(run_dir, ignore_errors=True)
     os.mkdir(run_dir)
 
-    settings2d = Settings(DIM=(6, 13), N_EXAMPLES=16, RUN_DIR=run_dir)
+    teacher_reps = 0    # just generate ground truth
+
+    settings2d = Settings(DIM=(13, 6), N_EXAMPLES=16, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
     eval_omniscient_teachers(
         ground_truth=GeneralLinearGroundTruth(settings2d),
         user_model=LinearSVMUserModel(settings2d),
@@ -147,7 +155,7 @@ def all_simulations():
         settings=settings2d
     )
 
-    settings3d = Settings(DIM=(5, 5, 5), N_EXAMPLES=27, RUN_DIR=run_dir)
+    settings3d = Settings(DIM=(5, 5, 5), N_EXAMPLES=27, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
     eval_omniscient_teachers(
         ground_truth=GeneralLinearGroundTruth(settings3d),
         user_model=LinearSVMUserModel(settings3d),
