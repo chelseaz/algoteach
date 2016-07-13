@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 from user_model import LinearSVMUserModel, RBFSVMUserModel
 from teacher import RandomTeacher, GridTeacher, OptimalTeacher
 from history import History
-from ground_truth import SimpleLinearGroundTruth, GeneralLinearGroundTruth, error_to_accuracy
+from ground_truth import error_to_accuracy, SimpleLinearGroundTruth, GeneralLinearGroundTruth, \
+    SimplePolynomialGroundTruth
 
 class Settings(object):
     def __init__(self, DIM, N_EXAMPLES):
@@ -47,8 +48,8 @@ def run(settings, user_model, teacher, ground_truth):
 
     if len(settings.DIM) == 2:
         # plotting history only supported for two dimensions
-        history.plot(filename="%s-%s-%s" % (user_model.name, teacher.name, settings.dim_string()),
-            title="Active learning with %s user model, %s teacher\n%s grid | Boundary: %s" % \
+        history.plot(filename="%s-%s-%s" % (ground_truth.name, user_model.name, teacher.name),
+            title="Active learning with %s user model, %s teacher\n%s grid with %s" % \
                 (user_model.name, teacher.name, settings.dim_string(), str(ground_truth)),
             settings=settings)
     return history
@@ -102,10 +103,10 @@ def plot_teacher_accuracy(teacher_accuracies, filename, title):
 def eval_teachers_assuming_user_model():
     settings = Settings(DIM=(6, 13), N_EXAMPLES=16)
 
-    ground_truth = GeneralLinearGroundTruth(settings)
+    ground_truth = SimplePolynomialGroundTruth(2, settings)
     if len(settings.DIM) == 2:
         # plotting ground truth only supported for two dimensions
-        ground_truth.plot(filename='ground-truth-%s' % settings.dim_string())
+        ground_truth.plot()
 
     user_model = RBFSVMUserModel(settings)
     random_teacher = RandomTeacher(settings, ground_truth, with_replacement=True)
@@ -119,8 +120,8 @@ def eval_teachers_assuming_user_model():
     ]
     teacher_accuracies = aggregate_teacher_accuracies(settings, user_model, teacher_configs, ground_truth)
     plot_teacher_accuracy(teacher_accuracies, 
-        filename='%s-teacher-accuracy-%s' % (user_model.name, settings.dim_string()),
-        title="Comparison of teacher accuracy with %s user model\n%s grid | Boundary: %s" % \
+        filename='%s-%s-teacher-accuracy' % (ground_truth.name, user_model.name),
+        title="Comparison of teacher accuracy with %s user model\n%s grid with %s" % \
             (user_model.name, settings.dim_string(), str(ground_truth))
     )
 
