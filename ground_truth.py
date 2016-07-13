@@ -30,7 +30,7 @@ class GroundTruth(object):
 
         plt.axis('off')
         plt.title("Ground truth: %s grid with\n%s" % (self.settings.dim_string(), str(self)))
-        plt.imshow(self.grid.T, cmap=self.settings.GRID_CMAP, interpolation='none', origin='upper')
+        plt.imshow(self.grid.T, cmap=self.settings.GRID_CMAP, interpolation='none', origin='lower')
 
         fig = plt.gcf()
         fig.set_size_inches(6, 4)
@@ -86,7 +86,9 @@ class GeneralLinearGroundTruth(LinearGroundTruth):
         self.b = round(np.dot(self.w, origin), 2)
 
 
-# Boundary is given by <w, \phi(x)> = b where \phi(x)^T = (x_1 x_1^2 ... x_1^m x_2)
+# Boundary is given by <w, \phi(x)> = 0 where
+# \phi(x)^T = (1   x_1 x_1^2 ... x_1^m x_2)
+#       w^T = (w_0 w_1 w_2   ... w_m   1)
 class SimplePolynomialGroundTruth(GroundTruth):
     def __init__(self, degree, settings):
         self.degree = degree
@@ -96,18 +98,33 @@ class SimplePolynomialGroundTruth(GroundTruth):
         self.name = "%s-poly-%d" % (settings.dim_string(), degree)
 
     def classify(self, loc):
-        return np.dot(self.w, self.phi(loc)) - self.b < 0
+        return np.dot(self.w, self.phi(loc)) < 0
 
     def phi(self, loc):
         x_1, x_2 = loc[0:2]
-        return np.append([x_1 ** i for i in range(1, self.degree+1)], [x_2])
+        return np.concatenate([[1.0], [x_1 ** i for i in range(1, self.degree+1)], [x_2]])
 
     def set_boundary(self):
-        # All feature weights are sampled uniformly from [-1, 1], except x_2 which has weight 1
-        self.w = np.append(np.round(np.random.uniform(-1, 1, self.degree), 2), [1.0])
-        # Polynomial should pass through center of grid
-        origin = [b/2 for b in self.settings.DIM]
-        self.b = round(np.dot(self.w, self.phi(origin)), 2)
+        # A polynomial of degree m is determined by m+1 points.
+        # Sample m+1 coordinates in the x_1 dimension without replacement,
+        # then sample a coordinate in the x_2 dimension for each independently.
+        # Compute the w vector that passes through these points.
+        x_1_coords = np.random.choice(range(self.settings.DIM[0]), size=self.degree+1, replace=False)
+        x_2_coords = np.random.choice(range(self.settings.DIM[1]), size=self.degree+1, replace=True)
+        self.points = zip(x_1_coords, x_2_coords)  # really first 2 dimensions of points
+        self.points = sorted(self.points, key=lambda pt: pt[0])
+
+        # solve \Phi w = 0 where
+        # \Phi = [\phi(point 1)^T \\ \vdots \\ \phi(point m+1)^T]
+        # Also enforce last coordinate of w is 1
+        phi_matrix = np.vstack([self.phi(point) for point in self.points])    # (m+1) x (m+2)
+        last_row = np.append(np.zeros(self.degree+1), [1.0])
+        A = np.vstack([phi_matrix, last_row])    # (m+2) x (m+2)
+        b = np.append(np.zeros(self.degree+1), [1.0])
+        self.w = np.linalg.solve(A, b)
+
+        assert self.w[-1] == 1.0
 
     def __str__(self):
-        return "polynomial boundary (w=%s, b=%.2f)" % (str(self.w), self.b)
+        return "polynomial boundary of degree %d\npassing through %s\n(w=%s)" % \
+            (self.degree, ', '.join(["(%d,%d)" % (x, y) for x, y in self.points]), str(np.round(self.w, 2)))
