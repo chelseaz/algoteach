@@ -1,7 +1,9 @@
 #!/usr/bin/env python
-import numpy as np
+import datetime
 import matplotlib
 import matplotlib.pyplot as plt
+import numpy as np
+import os
 
 from user_model import LinearSVMUserModel, RBFSVMUserModel
 from teacher import RandomTeacher, GridTeacher, OptimalTeacher
@@ -10,9 +12,10 @@ from ground_truth import error_to_accuracy, SimpleLinearGroundTruth, GeneralLine
     SimplePolynomialGroundTruth
 
 class Settings(object):
-    def __init__(self, DIM, N_EXAMPLES):
+    def __init__(self, DIM, N_EXAMPLES, RUN_DIR):
         self.DIM = DIM
         self.N_EXAMPLES = N_EXAMPLES
+        self.RUN_DIR = RUN_DIR
         self.LOCATIONS = self.compute_locations()
         self.GRID_CMAP = matplotlib.colors.ListedColormap(['dimgray', 'silver'])
 
@@ -34,8 +37,8 @@ class TeacherConfig(object):
 
 # Run active learning with given teacher. User behaves according to user model.
 def run(settings, user_model, teacher, ground_truth):
-    print "Running active learning with %s and %s" % \
-        (user_model.__class__.__name__, teacher.__class__.__name__)
+    print "Running active learning with %s grid, %s user model, %s teacher" % \
+        (ground_truth.name, user_model.name, teacher.name)
 
     history = History(user_model.prior)
     for i in range(settings.N_EXAMPLES):
@@ -48,7 +51,8 @@ def run(settings, user_model, teacher, ground_truth):
 
     if len(settings.DIM) == 2:
         # plotting history only supported for two dimensions
-        history.plot(filename="%s-%s-%s" % (ground_truth.name, user_model.name, teacher.name),
+        history.plot(
+            filename="%s/%s-%s-%s" % (settings.RUN_DIR, ground_truth.name, user_model.name, teacher.name),
             title="Active learning with %s user model, %s teacher\n%s grid with %s" % \
                 (user_model.name, teacher.name, settings.dim_string(), str(ground_truth)),
             settings=settings)
@@ -100,15 +104,11 @@ def plot_teacher_accuracy(teacher_accuracies, filename, title):
     plt.close()
 
 # Simulate user behaving exactly according to user model. Compare teachers.
-def eval_teachers_assuming_user_model():
-    settings = Settings(DIM=(6, 13), N_EXAMPLES=16)
-
-    ground_truth = SimplePolynomialGroundTruth(2, settings)
+def eval_omniscient_teachers(ground_truth, user_model, settings):
     if len(settings.DIM) == 2:
         # plotting ground truth only supported for two dimensions
         ground_truth.plot()
 
-    user_model = RBFSVMUserModel(settings)
     random_teacher = RandomTeacher(settings, ground_truth, with_replacement=True)
     grid_teacher = GridTeacher(settings, ground_truth, with_replacement=True)
     optimal_teacher = OptimalTeacher(settings, ground_truth, user_model, with_replacement=True)
@@ -120,11 +120,44 @@ def eval_teachers_assuming_user_model():
     ]
     teacher_accuracies = aggregate_teacher_accuracies(settings, user_model, teacher_configs, ground_truth)
     plot_teacher_accuracy(teacher_accuracies, 
-        filename='%s-%s-teacher-accuracy' % (ground_truth.name, user_model.name),
+        filename='%s/%s-%s-teacher-accuracy' % (settings.RUN_DIR, ground_truth.name, user_model.name),
         title="Comparison of teacher accuracy with %s user model\n%s grid with %s" % \
             (user_model.name, settings.dim_string(), str(ground_truth))
     )
 
 
+def all_simulations():
+    run_dir = datetime.datetime.now().strftime("%Y%m%d %H%m")
+    os.mkdir(run_dir)
+
+    settings2d = Settings(DIM=(6, 13), N_EXAMPLES=16, RUN_DIR=run_dir)
+    eval_omniscient_teachers(
+        ground_truth=GeneralLinearGroundTruth(settings2d),
+        user_model=LinearSVMUserModel(settings2d),
+        settings=settings2d
+    )
+    eval_omniscient_teachers(
+        ground_truth=SimplePolynomialGroundTruth(2, settings2d),
+        user_model=RBFSVMUserModel(settings2d),
+        settings=settings2d
+    )
+    eval_omniscient_teachers(
+        ground_truth=SimplePolynomialGroundTruth(3, settings2d),
+        user_model=RBFSVMUserModel(settings2d),
+        settings=settings2d
+    )
+
+    settings3d = Settings(DIM=(5, 5, 5), N_EXAMPLES=27, RUN_DIR=run_dir)
+    eval_omniscient_teachers(
+        ground_truth=GeneralLinearGroundTruth(settings3d),
+        user_model=LinearSVMUserModel(settings3d),
+        settings=settings3d
+    )
+    eval_omniscient_teachers(
+        ground_truth=SimplePolynomialGroundTruth(2, settings3d),
+        user_model=RBFSVMUserModel(settings3d),
+        settings=settings3d
+    )
+
 if __name__ == "__main__":
-    eval_teachers_assuming_user_model()
+    all_simulations()

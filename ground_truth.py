@@ -8,6 +8,7 @@ def error_to_accuracy(error):
 
 class GroundTruth(object):
     def __init__(self, settings):
+        self.name = "base"
         self.settings = settings
         self.generate_grid()
 
@@ -33,7 +34,7 @@ class GroundTruth(object):
 
         fig = plt.gcf()
         fig.set_size_inches(6, 4)
-        fig.savefig('%s-ground-truth.png' % self.name, dpi=100)
+        fig.savefig('%s/%s-ground-truth.png' % (self.settings.RUN_DIR, self.name), dpi=100)
 
         plt.close()
 
@@ -55,7 +56,7 @@ class LinearGroundTruth(GroundTruth):
         self.settings = settings
         self.set_boundary()
         self.generate_grid()
-        self.name = "linear-" + settings.dim_string()
+        self.name = settings.dim_string() + "-linear"
 
     def classify(self, loc):
         return np.dot(self.w, np.array(loc)) - self.b < 0
@@ -92,7 +93,7 @@ class SimplePolynomialGroundTruth(GroundTruth):
         self.settings = settings
         self.set_boundary()
         self.generate_grid()
-        self.name = "poly-%d-%s" % (degree, settings.dim_string())
+        self.name = "%s-poly-%d" % (settings.dim_string(), degree)
 
     def classify(self, loc):
         return np.dot(self.w, self.phi(loc)) - self.b < 0
