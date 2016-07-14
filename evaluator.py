@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import datetime
+import math
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,7 +12,7 @@ from user_model import LinearSVMUserModel, RBFSVMUserModel
 from teacher import RandomTeacher, GridTeacher, OptimalTeacher
 from history import History
 from ground_truth import error_to_accuracy, SimpleLinearGroundTruth, GeneralLinearGroundTruth, \
-    SimplePolynomialGroundTruth
+    SimplePolynomialGroundTruth, SimpleFunctionGroundTruth
 
 class Settings(object):
     def __init__(self, DIM, N_EXAMPLES, RUN_DIR, TEACHER_REPS):
@@ -36,6 +37,13 @@ class TeacherConfig(object):
     def __init__(self, teacher, reps):
         self.teacher = teacher
         self.reps = reps
+
+
+class Function(object):
+    def __init__(self, f, name, formula):
+        self.f = f
+        self.name = name
+        self.formula = formula
 
 
 # Run active learning with given teacher. User behaves according to user model.
@@ -134,15 +142,26 @@ def eval_omniscient_teachers(ground_truth, user_model, settings):
 
 
 def all_simulations():
+    # set random seed globally
     random.seed(1234)
     np.random.seed(1234)
 
+    # prepare directory for saving files
     run_dir = datetime.datetime.now().strftime("%Y%m%d %H%M")
     shutil.rmtree(run_dir, ignore_errors=True)
     os.mkdir(run_dir)
 
+    # define literal ground truth functions
+    exp = Function(f=lambda x: math.exp(x)-2, name="exp", formula="e^x-2")
+    sin = Function(f=lambda x: 2*math.sin(x), name="sin", formula="2*sin(x)")
+    xsinx = Function(f=lambda x: x * math.sin(x), name="x sin x", formula="x * sin(x)")
+
+    # other settings
+
     # teacher_reps = 0    # just generate ground truth
     teacher_reps = 20
+
+    # run experiments
 
     settings = Settings(DIM=(13, 6), N_EXAMPLES=16, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
     eval_omniscient_teachers(
@@ -153,6 +172,12 @@ def all_simulations():
     for degree in range(2, 5):
         eval_omniscient_teachers(
             ground_truth=SimplePolynomialGroundTruth(degree, settings),
+            user_model=RBFSVMUserModel(settings),
+            settings=settings
+        )
+    for fn in [exp, sin, xsinx]:
+        eval_omniscient_teachers(
+            ground_truth=SimpleFunctionGroundTruth(settings, fn),
             user_model=RBFSVMUserModel(settings),
             settings=settings
         )

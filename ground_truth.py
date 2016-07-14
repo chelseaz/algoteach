@@ -7,10 +7,6 @@ def error_to_accuracy(error):
     return 0 if error is None else 1 - error
 
 class GroundTruth(object):
-    def __init__(self, settings):
-        self.name = "base"
-        self.settings = settings
-        self.generate_grid()
 
     def generate_grid(self):
         self.grid = np.empty(self.settings.DIM)
@@ -128,3 +124,21 @@ class SimplePolynomialGroundTruth(GroundTruth):
     def __str__(self):
         return "polynomial boundary of degree %d\npassing through %s\n(w=%s)" % \
             (self.degree, ', '.join(["(%d,%d)" % (x, y) for x, y in self.points]), str(np.round(self.w, 2)))
+
+
+# Boundary is given by x_2 >= f(x_1). In 2D, y >= f(x)
+# Translate coordinates so that center of grid is origin
+class SimpleFunctionGroundTruth(GroundTruth):
+    def __init__(self, settings, fn):
+        self.settings = settings
+        self.fn = fn
+        self.origin = np.array([b/2 for b in self.settings.DIM])
+        self.generate_grid()
+        self.name = "%s-%s" % (settings.dim_string(), fn.name)
+
+    def classify(self, loc):
+        x_1, x_2 = np.array(loc[0:2]) - self.origin
+        return x_2 >= self.fn.f(x_1)
+
+    def __str__(self):
+        return "boundary %s" % self.fn.formula
