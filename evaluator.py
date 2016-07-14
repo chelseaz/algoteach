@@ -4,6 +4,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import random
 import shutil
 
 from user_model import LinearSVMUserModel, RBFSVMUserModel
@@ -98,6 +99,7 @@ def plot_teacher_accuracy(teacher_accuracies, filename, title):
     plt.ylabel("Accuracy")
     plt.title(title)
     plt.legend(loc='lower right')
+    plt.subplots_adjust(top=0.9)
 
     fig = plt.gcf()
     fig.set_size_inches(8, 8)
@@ -132,39 +134,51 @@ def eval_omniscient_teachers(ground_truth, user_model, settings):
 
 
 def all_simulations():
+    random.seed(1234)
+    np.random.seed(1234)
+
     run_dir = datetime.datetime.now().strftime("%Y%m%d %H%M")
     shutil.rmtree(run_dir, ignore_errors=True)
     os.mkdir(run_dir)
 
-    teacher_reps = 0    # just generate ground truth
+    # teacher_reps = 0    # just generate ground truth
+    teacher_reps = 20
 
-    settings2d = Settings(DIM=(13, 6), N_EXAMPLES=16, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
+    settings = Settings(DIM=(13, 6), N_EXAMPLES=16, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
     eval_omniscient_teachers(
-        ground_truth=GeneralLinearGroundTruth(settings2d),
-        user_model=LinearSVMUserModel(settings2d),
-        settings=settings2d
+        ground_truth=GeneralLinearGroundTruth(settings),
+        user_model=LinearSVMUserModel(settings),
+        settings=settings
+    )
+    for degree in range(2, 5):
+        eval_omniscient_teachers(
+            ground_truth=SimplePolynomialGroundTruth(degree, settings),
+            user_model=RBFSVMUserModel(settings),
+            settings=settings
+        )
+
+    settings = Settings(DIM=(5, 5, 5), N_EXAMPLES=27, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
+    eval_omniscient_teachers(
+        ground_truth=GeneralLinearGroundTruth(settings),
+        user_model=LinearSVMUserModel(settings),
+        settings=settings
     )
     eval_omniscient_teachers(
-        ground_truth=SimplePolynomialGroundTruth(2, settings2d),
-        user_model=RBFSVMUserModel(settings2d),
-        settings=settings2d
-    )
-    eval_omniscient_teachers(
-        ground_truth=SimplePolynomialGroundTruth(3, settings2d),
-        user_model=RBFSVMUserModel(settings2d),
-        settings=settings2d
+        ground_truth=SimplePolynomialGroundTruth(2, settings),
+        user_model=RBFSVMUserModel(settings),
+        settings=settings
     )
 
-    settings3d = Settings(DIM=(5, 5, 5), N_EXAMPLES=27, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
+    settings = Settings(DIM=(3, 3, 3, 3), N_EXAMPLES=32, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
     eval_omniscient_teachers(
-        ground_truth=GeneralLinearGroundTruth(settings3d),
-        user_model=LinearSVMUserModel(settings3d),
-        settings=settings3d
+        ground_truth=GeneralLinearGroundTruth(settings),
+        user_model=LinearSVMUserModel(settings),
+        settings=settings
     )
     eval_omniscient_teachers(
-        ground_truth=SimplePolynomialGroundTruth(2, settings3d),
-        user_model=RBFSVMUserModel(settings3d),
-        settings=settings3d
+        ground_truth=SimplePolynomialGroundTruth(2, settings),
+        user_model=RBFSVMUserModel(settings),
+        settings=settings
     )
 
 if __name__ == "__main__":

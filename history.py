@@ -21,10 +21,10 @@ class History(object):
         plt.axis('off')
         plt.title("Prediction after %d iterations" % (i+1))
         # label=0 is dark gray, label=1 is silver
-        plt.imshow(prediction, cmap=settings.GRID_CMAP, interpolation='none', origin='upper')
+        plt.imshow(prediction.T, cmap=settings.GRID_CMAP, interpolation='none', origin='lower')
         for j in range(i+1):
             loc, label = self.examples[j]
-            y, x = loc
+            x, y = loc
             c = 'maroon' if j == i else 'black'
             plt.annotate(s=str(j+1), xy=(x, y), color=c)
 
