@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import argparse
 import datetime
 import math
 import matplotlib
@@ -107,7 +108,7 @@ def plot_teacher_accuracy(teacher_accuracies, filename, title):
     plt.ylabel("Accuracy")
     plt.title(title)
     plt.legend(loc='lower right')
-    plt.subplots_adjust(top=0.9)
+    plt.subplots_adjust(top=0.85)
 
     fig = plt.gcf()
     fig.set_size_inches(8, 8)
@@ -141,28 +142,30 @@ def eval_omniscient_teachers(ground_truth, user_model, settings):
     )
 
 
-def all_simulations():
+def all_simulations(args):
     # set random seed globally
     random.seed(1234)
     np.random.seed(1234)
 
     # prepare directory for saving files
     run_dir = datetime.datetime.now().strftime("%Y%m%d %H%M")
+    if args.desc:
+        run_dir = "%s-%s" % (run_dir, args.desc)
     shutil.rmtree(run_dir, ignore_errors=True)
     os.mkdir(run_dir)
 
     # define literal ground truth functions
-    exp = Function(f=lambda x: math.exp(x)-2, name="exp", formula="e^x-2")
-    sin = Function(f=lambda x: 2*math.sin(x), name="sin", formula="2*sin(x)")
+    exp = Function(f=lambda x: math.exp(x)-2, name="exp", formula="e^x - 2")
+    sin = Function(f=lambda x: 2*math.sin(x), name="sin", formula="2 * sin(x)")
     xsinx = Function(f=lambda x: x * math.sin(x), name="x sin x", formula="x * sin(x)")
 
     # other settings
-
-    # teacher_reps = 0    # just generate ground truth
-    teacher_reps = 20
+    if args.dry_run:
+        teacher_reps = 0    # just generate ground truth
+    else:
+        teacher_reps = 20
 
     # run experiments
-
     settings = Settings(DIM=(13, 6), N_EXAMPLES=16, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
     eval_omniscient_teachers(
         ground_truth=GeneralLinearGroundTruth(settings),
@@ -207,4 +210,9 @@ def all_simulations():
     )
 
 if __name__ == "__main__":
-    all_simulations()
+    parser = argparse.ArgumentParser(description="Run algorithmic teaching simulations.")
+    parser.add_argument('--dry-run', action='store_true', help="only generate ground truth")
+    parser.add_argument('--desc', type=str, help="description appended to directory name")
+    args = parser.parse_args()
+
+    all_simulations(args)
