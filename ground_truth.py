@@ -3,11 +3,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+
 def error_to_accuracy(error):
     return 0 if error is None else 1 - error
 
 class GroundTruth(object):
-
     def generate_grid(self):
         self.grid = np.empty(self.settings.DIM)
         for loc in self.settings.LOCATIONS:
@@ -15,9 +15,11 @@ class GroundTruth(object):
 
         print self.grid.T
 
+    # return True or False
     def classify(self, loc):
         raise NotImplementedError
 
+    # return True (1) or False (0)
     def at(self, loc):
         return self.grid[loc]
 
