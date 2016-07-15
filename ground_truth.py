@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
-import matplotlib.pyplot as plt
 import numpy as np
 
 
 def error_to_accuracy(error):
     return 0 if error is None else 1 - error
+
 
 class GroundTruth(object):
     def generate_grid(self):
@@ -22,19 +22,6 @@ class GroundTruth(object):
     # return True (1) or False (0)
     def at(self, loc):
         return self.grid[loc]
-
-    def plot(self):
-        plt.figure()
-
-        plt.axis('off')
-        plt.title("Ground truth: %s grid with\n%s" % (self.settings.dim_string(), str(self)))
-        plt.imshow(self.grid.T, cmap=self.settings.GRID_CMAP, interpolation='none', origin='lower')
-
-        fig = plt.gcf()
-        fig.set_size_inches(6, 4)
-        fig.savefig('%s/%s-ground-truth.png' % (self.settings.RUN_DIR, self.name), dpi=100)
-
-        plt.close()
 
     # Compute 0-1 loss between prediction and ground truth, averaged over all grid points.
     # This is the risk if all grid points are weighted equally.

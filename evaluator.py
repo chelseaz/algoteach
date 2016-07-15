@@ -11,9 +11,9 @@ import shutil
 
 from user_model import LinearSVMUserModel, RBFSVMUserModel, RBFOKMUserModel
 from teacher import RandomTeacher, GridTeacher, OptimalTeacher
-from history import History
 from ground_truth import error_to_accuracy, SimpleLinearGroundTruth, GeneralLinearGroundTruth, \
     SimplePolynomialGroundTruth, SimpleFunctionGroundTruth
+from viz import *
 
 class Settings(object):
     def __init__(self, DIM, N_EXAMPLES, RUN_DIR, TEACHER_REPS):
@@ -37,6 +37,19 @@ class Settings(object):
         prior = np.empty(self.DIM)
         prior.fill(p)
         return prior
+
+
+class History(object):
+    def __init__(self, user_prior):
+        self.prior = user_prior
+        self.examples = []    # teaching examples ((x, y), 0/1)
+        self.predictions = []    # user predictions of grid labels
+
+    def add_example(self, example):
+        self.examples.append(example)
+
+    def add_prediction(self, prediction):
+        self.predictions.append(prediction)
 
 
 class TeacherConfig(object):
@@ -65,20 +78,27 @@ def run(settings, user_model, teacher, ground_truth):
         history.add_prediction(prediction)
         # print "examples: " + str(history.examples)
         # print prediction
+        # if isinstance(user_model, RBFOKMUserModel):
+        #     plot_evaluation(
+        #         evaluation=user_model.evaluate_grid(history.examples),
+        #         filename="%s/%s-%s-%s-%d" % (settings.RUN_DIR, ground_truth.name, user_model.name, teacher.name, i+1),
+        #         title="%s user model after %d iterations" % (user_model.name, i+1),
+        #         settings=settings)
 
-    if len(settings.DIM) == 2:
-        # plotting history only supported for two dimensions
-        history.plot(
-            filename="%s/%s-%s-%s" % (settings.RUN_DIR, ground_truth.name, user_model.name, teacher.name),
-            title="Active learning with %s user model, %s teacher\n%s grid with %s" % \
-                (user_model.name, teacher.name, settings.dim_string(), str(ground_truth)),
-            settings=settings)
+    plot_history(
+        history=history,
+        filename="%s/%s-%s-%s" % (settings.RUN_DIR, ground_truth.name, user_model.name, teacher.name),
+        title="Active learning with %s user model, %s teacher\n%s grid with %s" % \
+            (user_model.name, teacher.name, settings.dim_string(), str(ground_truth)),
+        settings=settings)
     return history
+
 
 def compute_teacher_accuracies(settings, user_model, teacher, ground_truth):
     history = run(settings, user_model, teacher, ground_truth)
     errors = [ground_truth.prediction_error(prediction) for prediction in history.predictions]
     return [error_to_accuracy(error) for error in errors]
+
 
 def aggregate_teacher_accuracies(settings, user_model, teacher_configs, ground_truth):
     teacher_accuracies = []
@@ -100,32 +120,10 @@ def aggregate_teacher_accuracies(settings, user_model, teacher_configs, ground_t
 
     return teacher_accuracies
 
-def plot_teacher_accuracy(teacher_accuracies, filename, title):
-    plt.figure()
-
-    for name, accuracies in teacher_accuracies:
-        plt.plot(range(1, len(accuracies)+1), accuracies, label=name, linestyle='-', linewidth=2)
-
-    axes = plt.gca()
-    axes.set_ylim([0, 1.1])
-
-    plt.xlabel("Teaching examples")
-    plt.ylabel("Accuracy")
-    plt.title(title)
-    plt.legend(loc='lower right')
-    plt.subplots_adjust(top=0.85)
-
-    fig = plt.gcf()
-    fig.set_size_inches(8, 8)
-    fig.savefig('%s.png' % filename, dpi=100)
-
-    plt.close()
 
 # Simulate user behaving exactly according to user model. Compare teachers.
 def eval_omniscient_teachers(ground_truth, user_model, settings):
-    if len(settings.DIM) == 2:
-        # plotting ground truth only supported for two dimensions
-        ground_truth.plot()
+    plot_ground_truth(ground_truth)
 
     if settings.TEACHER_REPS <= 0:
         return
