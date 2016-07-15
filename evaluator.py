@@ -9,7 +9,7 @@ import os
 import random
 import shutil
 
-from user_model import LinearSVMUserModel, RBFSVMUserModel
+from user_model import LinearSVMUserModel, RBFSVMUserModel, RBFOKMUserModel
 from teacher import RandomTeacher, GridTeacher, OptimalTeacher
 from history import History
 from ground_truth import error_to_accuracy, SimpleLinearGroundTruth, GeneralLinearGroundTruth, \
@@ -32,6 +32,11 @@ class Settings(object):
 
     def dim_string(self):
         return 'x'.join([str(b) for b in self.DIM])
+
+    def uniform_prior(self, p=0.5):
+        prior = np.empty(self.DIM)
+        prior.fill(p)
+        return prior
 
 
 class TeacherConfig(object):
@@ -163,51 +168,57 @@ def all_simulations(args):
     if args.dry_run:
         teacher_reps = 0    # just generate ground truth
     else:
-        teacher_reps = 20
+        teacher_reps = 1
 
     # run experiments
     settings = Settings(DIM=(13, 6), N_EXAMPLES=16, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
+    # eval_omniscient_teachers(
+    #     ground_truth=GeneralLinearGroundTruth(settings),
+    #     user_model=LinearSVMUserModel(settings),
+    #     settings=settings
+    # )
     eval_omniscient_teachers(
         ground_truth=GeneralLinearGroundTruth(settings),
-        user_model=LinearSVMUserModel(settings),
-        settings=settings
-    )
-    for degree in range(2, 5):
-        eval_omniscient_teachers(
-            ground_truth=SimplePolynomialGroundTruth(degree, settings),
-            user_model=RBFSVMUserModel(settings),
-            settings=settings
-        )
-    for fn in [exp, sin, xsinx]:
-        eval_omniscient_teachers(
-            ground_truth=SimpleFunctionGroundTruth(settings, fn),
-            user_model=RBFSVMUserModel(settings),
-            settings=settings
-        )
-
-    settings = Settings(DIM=(5, 5, 5), N_EXAMPLES=27, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
-    eval_omniscient_teachers(
-        ground_truth=GeneralLinearGroundTruth(settings),
-        user_model=LinearSVMUserModel(settings),
-        settings=settings
-    )
-    eval_omniscient_teachers(
-        ground_truth=SimplePolynomialGroundTruth(2, settings),
-        user_model=RBFSVMUserModel(settings),
+        user_model=RBFOKMUserModel(settings, prior=settings.uniform_prior(), eta=0.85, lambda_param=0.05, w=1),
         settings=settings
     )
 
-    settings = Settings(DIM=(3, 3, 3, 3), N_EXAMPLES=32, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
-    eval_omniscient_teachers(
-        ground_truth=GeneralLinearGroundTruth(settings),
-        user_model=LinearSVMUserModel(settings),
-        settings=settings
-    )
-    eval_omniscient_teachers(
-        ground_truth=SimplePolynomialGroundTruth(2, settings),
-        user_model=RBFSVMUserModel(settings),
-        settings=settings
-    )
+    # for degree in range(2, 5):
+    #     eval_omniscient_teachers(
+    #         ground_truth=SimplePolynomialGroundTruth(degree, settings),
+    #         user_model=RBFSVMUserModel(settings),
+    #         settings=settings
+    #     )
+    # for fn in [exp, sin, xsinx]:
+    #     eval_omniscient_teachers(
+    #         ground_truth=SimpleFunctionGroundTruth(settings, fn),
+    #         user_model=RBFSVMUserModel(settings),
+    #         settings=settings
+    #     )
+
+    # settings = Settings(DIM=(5, 5, 5), N_EXAMPLES=27, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
+    # eval_omniscient_teachers(
+    #     ground_truth=GeneralLinearGroundTruth(settings),
+    #     user_model=LinearSVMUserModel(settings),
+    #     settings=settings
+    # )
+    # eval_omniscient_teachers(
+    #     ground_truth=SimplePolynomialGroundTruth(2, settings),
+    #     user_model=RBFSVMUserModel(settings),
+    #     settings=settings
+    # )
+
+    # settings = Settings(DIM=(3, 3, 3, 3), N_EXAMPLES=32, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
+    # eval_omniscient_teachers(
+    #     ground_truth=GeneralLinearGroundTruth(settings),
+    #     user_model=LinearSVMUserModel(settings),
+    #     settings=settings
+    # )
+    # eval_omniscient_teachers(
+    #     ground_truth=SimplePolynomialGroundTruth(2, settings),
+    #     user_model=RBFSVMUserModel(settings),
+    #     settings=settings
+    # )
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run algorithmic teaching simulations.")
