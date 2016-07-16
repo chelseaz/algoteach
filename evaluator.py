@@ -8,6 +8,7 @@ import numpy as np
 import os
 import random
 import shutil
+from timeit import default_timer as timer
 
 from user_model import *
 from teacher import RandomTeacher, GridTeacher, OptimalTeacher
@@ -70,6 +71,7 @@ class Function(object):
 
 # Run active learning with given teacher. User behaves according to user model.
 def run(settings, user_model, teacher, ground_truth):
+    start_time = timer()
     print "Running active learning with %s grid, %s user model, %s teacher" % \
         (ground_truth.name, user_model.name, teacher.name)
 
@@ -81,6 +83,9 @@ def run(settings, user_model, teacher, ground_truth):
         history.add_prediction_result(prediction_result)
         # print "examples: " + str(history.examples)
         # print prediction
+
+    end_time = timer()
+    print "Took %d seconds" % (end_time - start_time)
 
     plot_history(
         history=history,
@@ -163,15 +168,15 @@ def all_simulations(args):
     if args.dry_run:
         teacher_reps = 0    # just generate ground truth
     else:
-        teacher_reps = 1
+        teacher_reps = 20
 
     # run experiments
     settings = Settings(DIM=(13, 6), N_EXAMPLES=16, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
-    # eval_omniscient_teachers(
-    #     ground_truth=GeneralLinearGroundTruth(settings),
-    #     user_model=LinearSVMUserModel(settings),
-    #     settings=settings
-    # )
+    eval_omniscient_teachers(
+        ground_truth=GeneralLinearGroundTruth(settings),
+        user_model=LinearSVMUserModel(settings),
+        settings=settings
+    )
     eval_omniscient_teachers(
         ground_truth=GeneralLinearGroundTruth(settings),
         user_model=RBFOKMUserModel(settings, prior=settings.uniform_prior(), eta=0.85, lambda_param=0.05, w=1),

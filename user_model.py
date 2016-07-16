@@ -35,7 +35,7 @@ class SVMUserModel(UserModel):
         y = [label for (_, label) in examples]
         if len(set(y)) < 2:
             # we don't have examples for both labels yet
-            return None
+            return PredictionResult(prediction=None)
 
         model.fit(X, y)
         prediction_list = model.predict(self.settings.LOCATIONS)
@@ -70,6 +70,8 @@ class RBFSVMUserModel(SVMUserModel):
 
 # Performs function approximation using an online kernel machine
 # See Dragan and Srinivasa (RoMan 2012)
+# TODO: make stateful, so that implementation is truly online and previous computations are saved.
+# Currently the user model interface is immutable.
 class RBFOKMUserModel(UserModel):
     def __init__(self, settings, prior, eta, lambda_param, w):
         super(self.__class__, self).__init__(settings)
