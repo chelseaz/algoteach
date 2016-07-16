@@ -87,8 +87,8 @@ class OptimalTeacher(Teacher):
         for example_seq in example_seqs:
             extra_examples = [(loc, self.ground_truth.at(loc)) for loc in example_seq]
             all_examples = history.examples + extra_examples
-            prediction = self.user_model.predict_grid(all_examples)
-            prediction_error = self.ground_truth.prediction_error(prediction)
+            prediction_result = self.user_model.predict_grid(all_examples)
+            prediction_error = self.ground_truth.prediction_error(prediction_result.prediction)
             example_seq_to_error[example_seq] = prediction_error
 
         return argmin(example_seq_to_error.items())

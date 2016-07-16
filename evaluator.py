@@ -9,11 +9,11 @@ import os
 import random
 import shutil
 
-from user_model import LinearSVMUserModel, RBFSVMUserModel, RBFOKMUserModel
+from user_model import *
 from teacher import RandomTeacher, GridTeacher, OptimalTeacher
-from ground_truth import error_to_accuracy, SimpleLinearGroundTruth, GeneralLinearGroundTruth, \
-    SimplePolynomialGroundTruth, SimpleFunctionGroundTruth
+from ground_truth import *
 from viz import *
+
 
 class Settings(object):
     def __init__(self, DIM, N_EXAMPLES, RUN_DIR, TEACHER_REPS):
@@ -43,13 +43,16 @@ class History(object):
     def __init__(self, user_prior):
         self.prior = user_prior
         self.examples = []    # teaching examples ((x, y), 0/1)
-        self.predictions = []    # user predictions of grid labels
+        self.predictions = []    # user predictions of grid labels (0/1 array)
+        self.evaluations = []    # user evaluations of grid labels (array of values in [0,1])
 
     def add_example(self, example):
         self.examples.append(example)
 
-    def add_prediction(self, prediction):
-        self.predictions.append(prediction)
+    def add_prediction_result(self, prediction_result):
+        self.predictions.append(prediction_result.prediction)
+        if prediction_result.evaluation is not None:
+            self.evaluations.append(prediction_result.evaluation)
 
 
 class TeacherConfig(object):
@@ -74,16 +77,10 @@ def run(settings, user_model, teacher, ground_truth):
     for i in range(settings.N_EXAMPLES):
         example = teacher.next_example(history)
         history.add_example(example)
-        prediction = user_model.predict_grid(history.examples)
-        history.add_prediction(prediction)
+        prediction_result = user_model.predict_grid(history.examples)
+        history.add_prediction_result(prediction_result)
         # print "examples: " + str(history.examples)
         # print prediction
-        # if isinstance(user_model, RBFOKMUserModel):
-        #     plot_evaluation(
-        #         evaluation=user_model.evaluate_grid(history.examples),
-        #         filename="%s/%s-%s-%s-%d" % (settings.RUN_DIR, ground_truth.name, user_model.name, teacher.name, i+1),
-        #         title="%s user model after %d iterations" % (user_model.name, i+1),
-        #         settings=settings)
 
     plot_history(
         history=history,

@@ -3,6 +3,12 @@ import numpy as np
 from sklearn import svm
 
 
+class PredictionResult(object):
+    def __init__(self, prediction, evaluation=None):
+        self.prediction = prediction
+        self.evaluation = evaluation
+
+
 class UserModel(object):
     def __init__(self, settings):
         self.name = "base"
@@ -11,9 +17,10 @@ class UserModel(object):
 
     # predict label of all locations
     def predict_grid(self, examples):
-        predict = lambda p: 1 if p >= 0.5 else 0
-        vpredict = np.vectorize(predict)
-        return vpredict(self.evaluate_grid(examples))
+        threshold = lambda p: 1 if p >= 0.5 else 0
+        vthreshold = np.vectorize(threshold)
+        evaluation = self.evaluate_grid(examples)
+        return PredictionResult(prediction=vthreshold(evaluation), evaluation=evaluation)
 
     # get probability of label 1 for all locations
     def evaluate_grid(self, examples):
@@ -37,7 +44,7 @@ class SVMUserModel(UserModel):
         for loc, pred in zip(self.settings.LOCATIONS, prediction_list):
             prediction_array[loc] = pred
 
-        return prediction_array
+        return PredictionResult(prediction=prediction_array)
 
     def get_model(self):
         raise NotImplementedError

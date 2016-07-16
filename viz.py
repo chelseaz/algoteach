@@ -24,38 +24,29 @@ def plot_ground_truth(ground_truth):
     plt.close()
 
 
-# plot a model evaluated at all grid locations
-def plot_evaluation(evaluation, filename, title, settings):
-    if len(settings.DIM) > 2:
-        # plotting evaluation only supported for two dimensions
-        return
-
-    plt.figure()
-
-    plt.axis('off')
-    plt.title(title)
-    plt.imshow(evaluation.T, cmap="YlOrRd", origin='lower', vmin=0.0, vmax=1.0)
-    # plt.colorbar()
-
-    # plot contours
-    # coords_by_dim = [range(b) for b in settings.DIM]
-    # X, Y = np.meshgrid(*coords_by_dim)
-    # contour_set = plt.contour(X, Y, evaluation.T, colors='k', origin='lower')
-    # plt.clabel(contour_set, inline=1, fontsize=10)
-
-    fig = plt.gcf()
-    fig.set_size_inches(6, 4)
-    fig.savefig('%s.png' % filename, dpi=100)
-
-    plt.close()
-
-
 def plot_history(history, filename, title, settings):
     if len(settings.DIM) > 2:
         # plotting history only supported for two dimensions
         return
 
-    def plot_iteration(i, settings):
+    def plot_iterations(plot_iteration_fn, suffix):
+        plt.figure()
+        plt.suptitle(title)
+
+        valid_iter = [i for i in range(len(history.examples)) if history.predictions[i] is not None]
+        N = len(valid_iter)
+        nrow = int(math.ceil(N/2.0))
+        for fignum, i in enumerate(valid_iter):
+            plt.subplot(nrow, 2, fignum+1)
+            plot_iteration_fn(i, settings)
+
+        fig = plt.gcf()
+        fig.set_size_inches(8, 12)
+        fig.savefig('%s-%s.png' % (filename, suffix), dpi=100)
+
+        plt.close()
+
+    def plot_prediction(i, settings):
         prediction = history.predictions[i]
 
         plt.axis('off')
@@ -68,21 +59,24 @@ def plot_history(history, filename, title, settings):
             c = 'maroon' if j == i else 'black'
             plt.annotate(s=str(j+1), xy=(x, y), color=c)
 
-    plt.figure()
-    plt.suptitle(title)
+    def plot_evaluation(i, settings):
+        evaluation = history.evaluations[i]
 
-    valid_iter = [i for i in range(len(history.examples)) if history.predictions[i] is not None]
-    N = len(valid_iter)
-    nrow = int(math.ceil(N/2.0))
-    for fignum, i in enumerate(valid_iter):
-        plt.subplot(nrow, 2, fignum+1)
-        plot_iteration(i, settings)
+        plt.axis('off')
+        plt.title("Evaluation after %d iterations" % (i+1))
+        # leave interpolation enabled
+        plt.imshow(evaluation.T, cmap="Greys_r", origin='lower', vmin=0.0, vmax=1.0)
+        # plt.colorbar()
 
-    fig = plt.gcf()
-    fig.set_size_inches(8, 12)
-    fig.savefig('%s.png' % filename, dpi=100)
+        # plot contours
+        # coords_by_dim = [range(b) for b in settings.DIM]
+        # X, Y = np.meshgrid(*coords_by_dim)
+        # contour_set = plt.contour(X, Y, evaluation.T, colors='k', origin='lower')
+        # plt.clabel(contour_set, inline=1, fontsize=10)
 
-    plt.close()
+    plot_iterations(plot_prediction, suffix="preds")
+    if len(history.evaluations) > 0:
+        plot_iterations(plot_evaluation, suffix="evals")
 
 
 def plot_teacher_accuracy(teacher_accuracies, filename, title):
