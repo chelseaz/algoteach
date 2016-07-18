@@ -8,7 +8,7 @@ import numpy as np
 import os
 import random
 import shutil
-from timeit import default_timer as timer
+import time
 
 from user_model import *
 from teacher import RandomTeacher, GridTeacher, OptimalTeacher
@@ -71,7 +71,7 @@ class Function(object):
 
 # Run active learning with given teacher. User behaves according to user model.
 def run(settings, user_model, teacher, ground_truth):
-    start_time = timer()
+    start_time = time.time()
     print "Running active learning with %s grid, %s user model, %s teacher" % \
         (ground_truth.name, user_model.name, teacher.name)
 
@@ -84,7 +84,7 @@ def run(settings, user_model, teacher, ground_truth):
         # print "examples: " + str(history.examples)
         # print prediction
 
-    end_time = timer()
+    end_time = time.time()
     print "Took %d seconds" % (end_time - start_time)
 
     plot_history(
@@ -124,27 +124,30 @@ def aggregate_teacher_accuracies(settings, user_model, teacher_configs, ground_t
 
 
 # Simulate user behaving exactly according to user model. Compare teachers.
-def eval_omniscient_teachers(ground_truth, user_model, settings):
+def eval_omniscient_teachers(ground_truth, user_model_fns, settings):
     plot_ground_truth(ground_truth)
 
     if settings.TEACHER_REPS <= 0:
         return
 
-    random_teacher = RandomTeacher(settings, ground_truth, with_replacement=True)
-    grid_teacher = GridTeacher(settings, ground_truth, with_replacement=True)
-    optimal_teacher = OptimalTeacher(settings, ground_truth, user_model, with_replacement=True)
+    for user_model_fn in user_model_fns:
+        user_model = user_model_fn(settings)
 
-    teacher_configs = [
-        TeacherConfig(random_teacher, settings.TEACHER_REPS),
-        TeacherConfig(grid_teacher, settings.TEACHER_REPS),
-        TeacherConfig(optimal_teacher, 1)
-    ]
-    teacher_accuracies = aggregate_teacher_accuracies(settings, user_model, teacher_configs, ground_truth)
-    plot_teacher_accuracy(teacher_accuracies, 
-        filename='%s/%s-%s-teacher-accuracy' % (settings.RUN_DIR, ground_truth.name, user_model.name),
-        title="Comparison of teacher accuracy with %s user model\n%s grid with %s" % \
-            (user_model.name, settings.dim_string(), str(ground_truth))
-    )
+        random_teacher = RandomTeacher(settings, ground_truth, with_replacement=True)
+        grid_teacher = GridTeacher(settings, ground_truth, with_replacement=True)
+        optimal_teacher = OptimalTeacher(settings, ground_truth, user_model, with_replacement=True)
+
+        teacher_configs = [
+            TeacherConfig(random_teacher, settings.TEACHER_REPS),
+            TeacherConfig(grid_teacher, settings.TEACHER_REPS),
+            TeacherConfig(optimal_teacher, 1)
+        ]
+        teacher_accuracies = aggregate_teacher_accuracies(settings, user_model, teacher_configs, ground_truth)
+        plot_teacher_accuracy(teacher_accuracies, 
+            filename='%s/%s-%s-teacher-accuracy' % (settings.RUN_DIR, ground_truth.name, user_model.name),
+            title="Comparison of teacher accuracy with %s user model\n%s grid with %s" % \
+                (user_model.name, settings.dim_string(), str(ground_truth))
+        )
 
 
 def all_simulations(args):
@@ -171,54 +174,54 @@ def all_simulations(args):
         teacher_reps = 20
 
     # run experiments
+    LinearSVMUserModelFn = lambda settings: LinearSVMUserModel(settings)
+    RBFSVMUserModelFn = lambda settings: RBFSVMUserModel(settings, C=1.0, gamma=0.1)
+    RBFOKMUserModelFn = lambda settings: RBFOKMUserModel(settings,
+        prior=settings.uniform_prior(), eta=0.85, lambda_param=0.05, w=1)
+
     settings = Settings(DIM=(13, 6), N_EXAMPLES=16, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
-    eval_omniscient_teachers(
-        ground_truth=GeneralLinearGroundTruth(settings),
-        user_model=LinearSVMUserModel(settings),
-        settings=settings
-    )
-    eval_omniscient_teachers(
-        ground_truth=GeneralLinearGroundTruth(settings),
-        user_model=RBFOKMUserModel(settings, prior=settings.uniform_prior(), eta=0.85, lambda_param=0.05, w=1),
-        settings=settings
-    )
+    # eval_omniscient_teachers(
+    #     ground_truth=GeneralLinearGroundTruth(settings),
+    #     user_model_fns=[LinearSVMUserModelFn, RBFOKMUserModelFn],
+    #     settings=settings
+    # )
 
     # for degree in range(2, 5):
     #     eval_omniscient_teachers(
     #         ground_truth=SimplePolynomialGroundTruth(degree, settings),
-    #         user_model=RBFSVMUserModel(settings),
+    #         user_model_fns=[RBFSVMUserModelFn, RBFOKMUserModelFn],
     #         settings=settings
     #     )
     # for fn in [exp, sin, xsinx]:
     #     eval_omniscient_teachers(
     #         ground_truth=SimpleFunctionGroundTruth(settings, fn),
-    #         user_model=RBFSVMUserModel(settings),
+    #         user_model_fns=[RBFSVMUserModelFn, RBFOKMUserModelFn],
     #         settings=settings
     #     )
 
-    # settings = Settings(DIM=(5, 5, 5), N_EXAMPLES=27, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
-    # eval_omniscient_teachers(
-    #     ground_truth=GeneralLinearGroundTruth(settings),
-    #     user_model=LinearSVMUserModel(settings),
-    #     settings=settings
-    # )
-    # eval_omniscient_teachers(
-    #     ground_truth=SimplePolynomialGroundTruth(2, settings),
-    #     user_model=RBFSVMUserModel(settings),
-    #     settings=settings
-    # )
+    settings = Settings(DIM=(5, 5, 5), N_EXAMPLES=27, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
+    eval_omniscient_teachers(
+        ground_truth=GeneralLinearGroundTruth(settings),
+        user_model_fns=[LinearSVMUserModelFn, RBFOKMUserModelFn],
+        settings=settings
+    )
+    eval_omniscient_teachers(
+        ground_truth=SimplePolynomialGroundTruth(2, settings),
+        user_model_fns=[RBFSVMUserModelFn, RBFOKMUserModelFn],
+        settings=settings
+    )
 
-    # settings = Settings(DIM=(3, 3, 3, 3), N_EXAMPLES=32, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
-    # eval_omniscient_teachers(
-    #     ground_truth=GeneralLinearGroundTruth(settings),
-    #     user_model=LinearSVMUserModel(settings),
-    #     settings=settings
-    # )
-    # eval_omniscient_teachers(
-    #     ground_truth=SimplePolynomialGroundTruth(2, settings),
-    #     user_model=RBFSVMUserModel(settings),
-    #     settings=settings
-    # )
+    settings = Settings(DIM=(3, 3, 3, 3), N_EXAMPLES=32, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
+    eval_omniscient_teachers(
+        ground_truth=GeneralLinearGroundTruth(settings),
+        user_model_fns=[LinearSVMUserModelFn, RBFOKMUserModelFn],
+        settings=settings
+    )
+    eval_omniscient_teachers(
+        ground_truth=SimplePolynomialGroundTruth(2, settings),
+        user_model_fns=[RBFSVMUserModelFn, RBFOKMUserModelFn],
+        settings=settings
+    )
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run algorithmic teaching simulations.")

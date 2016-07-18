@@ -60,12 +60,14 @@ class LinearSVMUserModel(SVMUserModel):
 
 
 class RBFSVMUserModel(SVMUserModel):
-    def __init__(self, settings):
+    def __init__(self, settings, C, gamma):
         super(self.__class__, self).__init__(settings)
+        self.C = C
+        self.gamma = gamma
         self.name = "RBF SVM"
 
     def get_model(self):
-        return svm.SVC(kernel='rbf', C=1.0, gamma=0.1)
+        return svm.SVC(kernel='rbf', C=self.C, gamma=self.gamma)
 
 
 # Performs function approximation using an online kernel machine
