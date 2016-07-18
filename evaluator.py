@@ -52,8 +52,7 @@ class History(object):
 
     def add_prediction_result(self, prediction_result):
         self.predictions.append(prediction_result.prediction)
-        if prediction_result.evaluation is not None:
-            self.evaluations.append(prediction_result.evaluation)
+        self.evaluations.append(prediction_result.evaluation)
 
 
 class TeacherConfig(object):
@@ -175,51 +174,53 @@ def all_simulations(args):
 
     # run experiments
     LinearSVMUserModelFn = lambda settings: LinearSVMUserModel(settings)
+    KDEUserModelFn = lambda settings: KDEUserModel(settings,
+        bw=np.eye(len(settings.DIM)))
     RBFSVMUserModelFn = lambda settings: RBFSVMUserModel(settings, C=1.0, gamma=0.1)
     RBFOKMUserModelFn = lambda settings: RBFOKMUserModel(settings,
         prior=settings.uniform_prior(), eta=0.85, lambda_param=0.05, w=1)
 
     settings = Settings(DIM=(13, 6), N_EXAMPLES=16, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
-    # eval_omniscient_teachers(
-    #     ground_truth=GeneralLinearGroundTruth(settings),
-    #     user_model_fns=[LinearSVMUserModelFn, RBFOKMUserModelFn],
-    #     settings=settings
-    # )
+    eval_omniscient_teachers(
+        ground_truth=GeneralLinearGroundTruth(settings),
+        user_model_fns=[LinearSVMUserModelFn, KDEUserModelFn, RBFOKMUserModelFn],
+        settings=settings
+    )
 
-    # for degree in range(2, 5):
-    #     eval_omniscient_teachers(
-    #         ground_truth=SimplePolynomialGroundTruth(degree, settings),
-    #         user_model_fns=[RBFSVMUserModelFn, RBFOKMUserModelFn],
-    #         settings=settings
-    #     )
-    # for fn in [exp, sin, xsinx]:
-    #     eval_omniscient_teachers(
-    #         ground_truth=SimpleFunctionGroundTruth(settings, fn),
-    #         user_model_fns=[RBFSVMUserModelFn, RBFOKMUserModelFn],
-    #         settings=settings
-    #     )
+    for degree in range(2, 5):
+        eval_omniscient_teachers(
+            ground_truth=SimplePolynomialGroundTruth(degree, settings),
+            user_model_fns=[RBFSVMUserModelFn, KDEUserModelFn, RBFOKMUserModelFn],
+            settings=settings
+        )
+    for fn in [exp, sin, xsinx]:
+        eval_omniscient_teachers(
+            ground_truth=SimpleFunctionGroundTruth(settings, fn),
+            user_model_fns=[RBFSVMUserModelFn, KDEUserModelFn, RBFOKMUserModelFn],
+            settings=settings
+        )
 
     settings = Settings(DIM=(5, 5, 5), N_EXAMPLES=27, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
     eval_omniscient_teachers(
         ground_truth=GeneralLinearGroundTruth(settings),
-        user_model_fns=[LinearSVMUserModelFn, RBFOKMUserModelFn],
+        user_model_fns=[LinearSVMUserModelFn, KDEUserModelFn, RBFOKMUserModelFn],
         settings=settings
     )
     eval_omniscient_teachers(
         ground_truth=SimplePolynomialGroundTruth(2, settings),
-        user_model_fns=[RBFSVMUserModelFn, RBFOKMUserModelFn],
+        user_model_fns=[RBFSVMUserModelFn, KDEUserModelFn, RBFOKMUserModelFn],
         settings=settings
     )
 
     settings = Settings(DIM=(3, 3, 3, 3), N_EXAMPLES=32, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
     eval_omniscient_teachers(
         ground_truth=GeneralLinearGroundTruth(settings),
-        user_model_fns=[LinearSVMUserModelFn, RBFOKMUserModelFn],
+        user_model_fns=[LinearSVMUserModelFn, KDEUserModelFn, RBFOKMUserModelFn],
         settings=settings
     )
     eval_omniscient_teachers(
         ground_truth=SimplePolynomialGroundTruth(2, settings),
-        user_model_fns=[RBFSVMUserModelFn, RBFOKMUserModelFn],
+        user_model_fns=[RBFSVMUserModelFn, KDEUserModelFn, RBFOKMUserModelFn],
         settings=settings
     )
 

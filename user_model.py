@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import math
 import numpy as np
 from sklearn import svm
 
@@ -20,7 +21,11 @@ class UserModel(object):
         threshold = lambda p: 1 if p >= 0.5 else 0
         vthreshold = np.vectorize(threshold)
         evaluation = self.evaluate_grid(examples)
-        return PredictionResult(prediction=vthreshold(evaluation), evaluation=evaluation)
+        if evaluation is None:
+            # we don't have examples for both labels yet
+            return PredictionResult(prediction=None)
+        else:
+            return PredictionResult(prediction=vthreshold(evaluation), evaluation=evaluation)
 
     # get probability of label 1 for all locations
     def evaluate_grid(self, examples):
@@ -68,6 +73,45 @@ class RBFSVMUserModel(SVMUserModel):
 
     def get_model(self):
         return svm.SVC(kernel='rbf', C=self.C, gamma=self.gamma)
+
+
+class KDEUserModel(UserModel):
+    def __init__(self, settings, bw):
+        super(self.__class__, self).__init__(settings)
+        self.bw = bw
+        self.name = "KDE"
+
+    # return P(Y=1|X) across grid locations
+    def evaluate_grid(self, examples):
+        pr_true = self.class_density(examples, True)
+        pr_false = self.class_density(examples, False)
+        if pr_true is None or pr_false is None:
+            return None
+
+        # assume noninformative prior, so P(Y=0) = P(Y=1)
+        return pr_true / (pr_true + pr_false)
+
+    # compute P(X|Y) across grid locations X for given class label Y
+    def class_density(self, examples, class_label):
+        class_examples = np.array([loc for loc, label in examples if label == class_label])
+        if len(class_examples) == 0:
+            return None
+
+        result = np.empty(self.settings.DIM)
+        for loc in self.settings.LOCATIONS:
+            result[loc] = self.class_density_at(loc, class_examples)
+        return result
+
+    def class_density_at(self, loc, class_examples):
+        d = len(self.settings.DIM)
+        n = len(class_examples)
+
+        xdiff = np.array(loc) - class_examples  # n x d
+        bwx = np.linalg.solve(self.bw, xdiff.T)  # d x n
+        # like np.diag(np.dot(x, bwx)), but without computing off-diagonal elements
+        xbwx = (xdiff.T * bwx).sum(0)  # n
+        factor = 1.0 / (n * (2*math.pi)**(d/2.0) * np.linalg.det(self.bw)**0.5)
+        return factor * np.exp(-0.5 * xbwx).sum()
 
 
 # Performs function approximation using an online kernel machine

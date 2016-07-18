@@ -29,11 +29,11 @@ def plot_history(history, filename, title, settings):
         # plotting history only supported for two dimensions
         return
 
-    def plot_iterations(plot_iteration_fn, suffix):
+    def plot_iterations(plot_iteration_fn, data, suffix):
         plt.figure()
         plt.suptitle(title)
 
-        valid_iter = [i for i in range(len(history.examples)) if history.predictions[i] is not None]
+        valid_iter = [i for i in range(len(history.examples)) if data[i] is not None]
         N = len(valid_iter)
         nrow = int(math.ceil(N/2.0))
         for fignum, i in enumerate(valid_iter):
@@ -74,9 +74,9 @@ def plot_history(history, filename, title, settings):
         # contour_set = plt.contour(X, Y, evaluation.T, colors='k', origin='lower')
         # plt.clabel(contour_set, inline=1, fontsize=10)
 
-    plot_iterations(plot_prediction, suffix="preds")
+    plot_iterations(plot_prediction, history.predictions, suffix="preds")
     if len(history.evaluations) > 0:
-        plot_iterations(plot_evaluation, suffix="evals")
+        plot_iterations(plot_evaluation, history.evaluations, suffix="evals")
 
 
 def plot_teacher_accuracy(teacher_accuracies, filename, title):
