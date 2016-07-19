@@ -75,45 +75,6 @@ class RBFSVMUserModel(SVMUserModel):
         return svm.SVC(kernel='rbf', C=self.C, gamma=self.gamma)
 
 
-class KDEUserModel(UserModel):
-    def __init__(self, settings, bw):
-        super(self.__class__, self).__init__(settings)
-        self.bw = bw
-        self.name = "KDE"
-
-    # return P(Y=1|X) across grid locations
-    def evaluate_grid(self, examples):
-        pr_true = self.class_density(examples, True)
-        pr_false = self.class_density(examples, False)
-        if pr_true is None or pr_false is None:
-            return None
-
-        # assume noninformative prior, so P(Y=0) = P(Y=1)
-        return pr_true / (pr_true + pr_false)
-
-    # compute P(X|Y) across grid locations X for given class label Y
-    def class_density(self, examples, class_label):
-        class_examples = np.array([loc for loc, label in examples if label == class_label])
-        if len(class_examples) == 0:
-            return None
-
-        result = np.empty(self.settings.DIM)
-        for loc in self.settings.LOCATIONS:
-            result[loc] = self.class_density_at(loc, class_examples)
-        return result
-
-    def class_density_at(self, loc, class_examples):
-        d = len(self.settings.DIM)
-        n = len(class_examples)
-
-        xdiff = np.array(loc) - class_examples  # n x d
-        bwx = np.linalg.solve(self.bw, xdiff.T)  # d x n
-        # like np.diag(np.dot(x, bwx)), but without computing off-diagonal elements
-        xbwx = (xdiff.T * bwx).sum(0)  # n
-        factor = 1.0 / (n * (2*math.pi)**(d/2.0) * np.linalg.det(self.bw)**0.5)
-        return factor * np.exp(-0.5 * xbwx).sum()
-
-
 # Performs function approximation using an online kernel machine
 # See Dragan and Srinivasa (RoMan 2012)
 # TODO: make stateful, so that implementation is truly online and previous computations are saved.
@@ -156,3 +117,65 @@ class RBFOKMUserModel(UserModel):
             val = np.exp(-0.5 * self.w * ((np.array(loc1) - np.array(loc2)) ** 2).sum())
             self.kernel_cache[key] = val
             return val
+
+
+class GenerativeUserModel(UserModel):
+    # return P(Y=1|X) across grid locations
+    def evaluate_grid(self, examples):
+        pr_true = self.class_density(examples, True)
+        pr_false = self.class_density(examples, False)
+        if pr_true is None or pr_false is None:
+            return None
+
+        # assume noninformative prior, so P(Y=0) = P(Y=1)
+        return pr_true / (pr_true + pr_false)
+
+    # compute P(X|Y) across grid locations X for given class label Y
+    def class_density(self, examples, class_label):
+        class_examples = np.array([loc for loc, label in examples if label == class_label])
+        if len(class_examples) == 0:
+            return None
+
+        result = np.empty(self.settings.DIM)
+        for loc in self.settings.LOCATIONS:
+            result[loc] = self.class_density_at(loc, class_examples)
+        return result
+
+
+# TODO: to improve performance, if bw is some multiple of the identity, just call
+# sklearn.neighbors.KernelDensity
+class KDEUserModel(GenerativeUserModel):
+    def __init__(self, settings, bw):
+        super(self.__class__, self).__init__(settings)
+        self.bw = bw
+        self.name = "KDE"
+
+    def class_density_at(self, loc, class_examples):
+        d = len(self.settings.DIM)
+        n = len(class_examples)
+
+        xdiff = np.array(loc) - class_examples  # n x d
+        bwx = np.linalg.solve(self.bw, xdiff.T)  # d x n
+        # like np.diag(np.dot(x, bwx)), but without computing off-diagonal elements
+        xbwx = (xdiff.T * bwx).sum(0)  # n
+        factor = 1.0 / (n * (2*math.pi)**(d/2.0) * np.linalg.det(self.bw)**0.5)
+        return factor * np.exp(-0.5 * xbwx).sum()
+
+
+# Generalized context model
+# Uses notation in BayesGCM (Vanpaemel, 2009) with beta = 1/2, gamma = 1 and
+# deterministic feedback (a_j = 1)
+class GCMUserModel(GenerativeUserModel):
+    def __init__(self, settings, c, alpha=2, r=2):
+        super(self.__class__, self).__init__(settings)
+        self.c = c    # determines kernel width
+        self.alpha = alpha    # distance is raised to the alpha power
+        self.r = r    # distance is calculated according to l_r metric
+        d = len(settings.DIM)
+        self.w = np.ones(d) / d    # uniform attention weights
+        self.name = "GCM"
+
+    def class_density_at(self, loc, class_examples):
+        xdiff = self.w * abs(np.array(loc) - class_examples)  # n x d
+        xdist = (xdiff ** self.r).sum(axis=1) ** (1.0/self.r)
+        return np.exp(-self.c * xdist ** self.alpha).sum()
