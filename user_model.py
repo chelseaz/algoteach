@@ -32,7 +32,7 @@ class UserModel(object):
         raise NotImplementedError
 
 
-class SVMUserModel(UserModel):
+class TwoClassSVMUserModel(UserModel):
     def predict_grid(self, examples):
         # fit SVM to all examples
         model = self.get_model()
@@ -55,21 +55,55 @@ class SVMUserModel(UserModel):
         raise NotImplementedError
 
 
-class LinearSVMUserModel(SVMUserModel):
+class OneClassSVMUserModel(UserModel):
+    OUTLIER_LABEL=0    # Treat failures as outlier class
+
+    def predict_grid(self, examples):
+        model = self.get_model()
+        X = [loc for (loc, label) in examples if label != self.OUTLIER_LABEL]
+        if len(X) == 0:
+            # no examples for normal class yet
+            return PredictionResult(prediction=None)
+
+        model.fit(X)
+        prediction_list = model.predict(self.settings.LOCATIONS)    # values are {1, -1}
+
+        prediction_array = np.empty(self.settings.DIM)
+        for loc, pred in zip(self.settings.LOCATIONS, prediction_list):
+            prediction_array[loc] = 1 if pred == 1 else 0
+
+        return PredictionResult(prediction=prediction_array)
+
+    def get_model(self):
+        raise NotImplementedError
+
+
+class RBF1SVMUserModel(OneClassSVMUserModel):
+    def __init__(self, settings, nu, gamma):
+        super(self.__class__, self).__init__(settings)
+        self.nu = nu
+        self.gamma = gamma
+        self.name = "RBF 1-SVM"
+
+    def get_model(self):
+        return svm.OneClassSVM(kernel='rbf', nu=self.nu, gamma=self.gamma)
+
+
+class Linear2SVMUserModel(TwoClassSVMUserModel):
     def __init__(self, settings):
         super(self.__class__, self).__init__(settings)
-        self.name = "linear SVM"
+        self.name = "linear 2-SVM"
 
     def get_model(self):
         return svm.SVC(kernel='linear')
 
 
-class RBFSVMUserModel(SVMUserModel):
+class RBF2SVMUserModel(TwoClassSVMUserModel):
     def __init__(self, settings, C, gamma):
         super(self.__class__, self).__init__(settings)
         self.C = C
         self.gamma = gamma
-        self.name = "RBF SVM"
+        self.name = "RBF 2-SVM"
 
     def get_model(self):
         return svm.SVC(kernel='rbf', C=self.C, gamma=self.gamma)
