@@ -69,10 +69,10 @@ class Function(object):
         self.formula = formula
 
 
-# Run active learning with given teacher. User behaves according to user model.
+# Run with given teacher. User behaves according to user model.
 def run(settings, user_model, teacher, ground_truth):
     start_time = time.time()
-    print "Running active learning with %s grid, %s user model, %s teacher" % \
+    print "Running with %s grid, %s user model, %s teacher" % \
         (ground_truth.name, user_model.name, teacher.name)
 
     history = History(user_model.prior)
@@ -90,7 +90,7 @@ def run(settings, user_model, teacher, ground_truth):
     plot_history(
         history=history,
         filename="%s/%s-%s-%s" % (settings.RUN_DIR, ground_truth.name, user_model.name, teacher.name),
-        title="Active learning with %s user model, %s teacher\n%s grid with %s" % \
+        title="Teaching with %s user model, %s teacher\n%s grid with %s" % \
             (user_model.name, teacher.name, settings.dim_string(), str(ground_truth)),
         settings=settings)
     return history
@@ -188,7 +188,7 @@ def all_simulations(args):
         teacher_reps = 20
 
     # run experiments
-    RBF1SVMUserModelFn = lambda settings: RBF1SVMUserModel(settings, nu=0.05, gamma=0.1)
+    RBF1SVMUserModelFn = lambda settings: RBF1SVMUserModel(settings, nu=0.5, gamma=0.1)
     Linear2SVMUserModelFn = lambda settings: Linear2SVMUserModel(settings)
     RBF2SVMUserModelFn = lambda settings: RBF2SVMUserModel(settings, C=1.0, gamma=0.1)
     RBFOKMUserModelFn = lambda settings: RBFOKMUserModel(settings,
@@ -197,25 +197,35 @@ def all_simulations(args):
         bw=np.eye(len(settings.DIM)))
     GCMUserModelFn = lambda settings: GCMUserModel(settings, c=1.0, r=1)
 
-    settings = Settings(DIM=(13, 6), N_EXAMPLES=16, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
+    # settings = Settings(DIM=(13, 6), N_EXAMPLES=16, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
+    # eval_omniscient_teachers(
+    #     ground_truth=GeneralLinearGroundTruth(settings),
+    #     user_model_fns=[RBF1SVMUserModelFn, Linear2SVMUserModelFn],#, RBFOKMUserModelFn, KDEUserModelFn, GCMUserModelFn],
+    #     settings=settings
+    # )
+
+    # for degree in range(2, 5):
+    #     eval_omniscient_teachers(
+    #         ground_truth=SimplePolynomialGroundTruth(degree, settings),
+    #         user_model_fns=[RBF1SVMUserModelFn, RBF2SVMUserModelFn],#, RBFOKMUserModelFn, KDEUserModelFn, GCMUserModelFn],
+    #         settings=settings
+    #     )
+    # for fn in [exp, sin, xsinx]:
+    #     eval_omniscient_teachers(
+    #         ground_truth=SimpleFunctionGroundTruth(settings, fn),
+    #         user_model_fns=[RBF1SVMUserModelFn, RBF2SVMUserModelFn],#, RBFOKMUserModelFn, KDEUserModelFn, GCMUserModelFn],
+    #         settings=settings
+    #     )
+
+    settings = Settings(DIM=(12, 12), N_EXAMPLES=16, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
     eval_omniscient_teachers(
-        ground_truth=GeneralLinearGroundTruth(settings),
-        user_model_fns=[RBF1SVMUserModelFn, Linear2SVMUserModelFn],#, RBFOKMUserModelFn, KDEUserModelFn, GCMUserModelFn],
+        ground_truth=GaussianGroundTruth(settings, threshold=0.01, bumps=[
+            (([2, -2], [[6., 1.], [0., 4.]]), 0.7),
+            (([-3, 3], [[3., 0.], [0., 3]]), 0.3)
+        ]),
+        user_model_fns=[RBF1SVMUserModelFn, RBF2SVMUserModelFn],#, RBFOKMUserModelFn, KDEUserModelFn, GCMUserModelFn],
         settings=settings
     )
-
-    for degree in range(2, 5):
-        eval_omniscient_teachers(
-            ground_truth=SimplePolynomialGroundTruth(degree, settings),
-            user_model_fns=[RBF1SVMUserModelFn, RBF2SVMUserModelFn],#, RBFOKMUserModelFn, KDEUserModelFn, GCMUserModelFn],
-            settings=settings
-        )
-    for fn in [exp, sin, xsinx]:
-        eval_omniscient_teachers(
-            ground_truth=SimpleFunctionGroundTruth(settings, fn),
-            user_model_fns=[RBF1SVMUserModelFn, RBF2SVMUserModelFn],#, RBFOKMUserModelFn, KDEUserModelFn, GCMUserModelFn],
-            settings=settings
-        )
 
     # settings = Settings(DIM=(5, 5, 5), N_EXAMPLES=27, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
     # eval_omniscient_teachers(

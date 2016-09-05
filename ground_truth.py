@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import numpy as np
+from scipy.stats import multivariate_normal
 from sklearn import metrics
 
 
@@ -148,3 +149,23 @@ class SimpleFunctionGroundTruth(GroundTruth):
     def __str__(self):
         return "boundary %s" % self.fn.formula
 
+
+class GaussianGroundTruth(GroundTruth):
+    def __init__(self, settings, bumps, threshold):
+        self.settings = settings
+        self.bumps = bumps
+        self.threshold = threshold
+        self.origin = np.array([b/2 for b in self.settings.DIM])
+        self.generate_grid()
+        self.name = "%s-gaussian" % settings.dim_string()
+
+    def classify(self, loc):
+        centered_loc = np.array(loc) - self.origin
+        density = 0.
+        for ((mean, cov), weight) in self.bumps:
+            density += weight * multivariate_normal.pdf(centered_loc, mean=mean, cov=cov)
+
+        return density > self.threshold
+
+    def __str__(self):
+        return "mixture of %d Gaussians" % len(self.bumps)
