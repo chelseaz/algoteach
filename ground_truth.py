@@ -4,6 +4,8 @@ import numpy as np
 from sklearn import metrics
 
 
+PREDICTION_METRICS=['accuracy', 'precision', 'recall']
+
 class GroundTruth(object):
     def generate_grid(self):
         self.grid = np.empty(self.settings.DIM)

@@ -79,17 +79,17 @@ def plot_history(history, filename, title, settings):
         plot_iterations(plot_evaluation, history.evaluations, suffix="evals")
 
 
-def plot_teacher_accuracy(teacher_accuracies, filename, title):
+def plot_teacher_perf(teacher_perf, metric, filename, title):
     plt.figure()
 
-    for name, accuracies in teacher_accuracies:
-        plt.plot(range(1, len(accuracies)+1), accuracies, label=name, linestyle='-', linewidth=2)
+    for name, perf in teacher_perf:
+        plt.plot(range(1, len(perf)+1), perf, label=name, linestyle='-', linewidth=2)
 
     axes = plt.gca()
     axes.set_ylim([0, 1.1])
 
     plt.xlabel("Teaching examples")
-    plt.ylabel("Accuracy")
+    plt.ylabel(metric)
     plt.title(title)
     plt.legend(loc='lower right')
     plt.subplots_adjust(top=0.85)

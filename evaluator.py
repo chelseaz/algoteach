@@ -151,13 +151,17 @@ def eval_omniscient_teachers(ground_truth, user_model_fns, settings):
             TeacherConfig(grid_teacher, settings.TEACHER_REPS),
             TeacherConfig(optimal_teacher, 1)
         ]
+
         all_teacher_metrics = compute_all_teachers(settings, user_model, teacher_configs, ground_truth)
-        teacher_accuracies = aggregate_teacher_metrics(all_teacher_metrics, 'accuracy')
-        plot_teacher_accuracy(teacher_accuracies, 
-            filename='%s/%s-%s-teacher-accuracy' % (settings.RUN_DIR, ground_truth.name, user_model.name),
-            title="Comparison of teacher accuracy with %s user model\n%s grid with %s" % \
-                (user_model.name, settings.dim_string(), str(ground_truth))
-        )
+        
+        for metric in PREDICTION_METRICS:
+            teacher_perf = aggregate_teacher_metrics(all_teacher_metrics, metric)
+            plot_teacher_perf(teacher_perf, 
+                metric=metric.capitalize(),
+                filename='%s/%s-%s-teacher-%s' % (settings.RUN_DIR, ground_truth.name, user_model.name, metric),
+                title="Comparison of teacher %s with %s user model\n%s grid with %s" % \
+                    (metric, user_model.name, settings.dim_string(), str(ground_truth))
+            )
 
 
 def all_simulations(args):
@@ -200,18 +204,18 @@ def all_simulations(args):
         settings=settings
     )
 
-    # for degree in range(2, 5):
-    #     eval_omniscient_teachers(
-    #         ground_truth=SimplePolynomialGroundTruth(degree, settings),
-    #         user_model_fns=[RBF1SVMUserModelFn, RBF2SVMUserModelFn],#, RBFOKMUserModelFn, KDEUserModelFn, GCMUserModelFn],
-    #         settings=settings
-    #     )
-    # for fn in [exp, sin, xsinx]:
-    #     eval_omniscient_teachers(
-    #         ground_truth=SimpleFunctionGroundTruth(settings, fn),
-    #         user_model_fns=[RBF1SVMUserModelFn, RBF2SVMUserModelFn],#, RBFOKMUserModelFn, KDEUserModelFn, GCMUserModelFn],
-    #         settings=settings
-    #     )
+    for degree in range(2, 5):
+        eval_omniscient_teachers(
+            ground_truth=SimplePolynomialGroundTruth(degree, settings),
+            user_model_fns=[RBF1SVMUserModelFn, RBF2SVMUserModelFn],#, RBFOKMUserModelFn, KDEUserModelFn, GCMUserModelFn],
+            settings=settings
+        )
+    for fn in [exp, sin, xsinx]:
+        eval_omniscient_teachers(
+            ground_truth=SimpleFunctionGroundTruth(settings, fn),
+            user_model_fns=[RBF1SVMUserModelFn, RBF2SVMUserModelFn],#, RBFOKMUserModelFn, KDEUserModelFn, GCMUserModelFn],
+            settings=settings
+        )
 
     # settings = Settings(DIM=(5, 5, 5), N_EXAMPLES=27, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
     # eval_omniscient_teachers(
