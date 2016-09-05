@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import numpy as np
+from sklearn import metrics
 
 
 def error_to_accuracy(error):
@@ -30,9 +31,18 @@ class GroundTruth(object):
         if prediction is None:
             return 1.0
 
-        d = self.settings.DIM
-        n_grid_pts = d[0] * d[1]
-        return np.sum(abs(prediction - self.grid)) / n_grid_pts
+        confusion = self.confusion_matrix(prediction)
+
+        n_grid_pts = np.product(self.settings.DIM)
+        return float(confusion['fp']+confusion['fn']) / n_grid_pts
+
+    def confusion_matrix(self, prediction):
+        if prediction is None:
+            return None
+
+        mat = metrics.confusion_matrix(self.grid.flatten(), prediction.flatten(),
+            labels=[1, 0])
+        return dict(tp=mat[0,0], fn=mat[0,1], fp=mat[1,0], tn=mat[1,1])
 
 
 # Boundary is given by <w, x> = b
@@ -131,3 +141,4 @@ class SimpleFunctionGroundTruth(GroundTruth):
 
     def __str__(self):
         return "boundary %s" % self.fn.formula
+
