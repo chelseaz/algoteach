@@ -4,10 +4,6 @@ import numpy as np
 from sklearn import metrics
 
 
-def error_to_accuracy(error):
-    return 0 if error is None else 1 - error
-
-
 class GroundTruth(object):
     def generate_grid(self):
         self.grid = np.empty(self.settings.DIM)
@@ -31,15 +27,23 @@ class GroundTruth(object):
         if prediction is None:
             return 1.0
 
-        confusion = self.confusion_matrix(prediction)
-
+        cm = self.confusion_matrix(prediction)
         n_grid_pts = np.product(self.settings.DIM)
-        return float(confusion['fp']+confusion['fn']) / n_grid_pts
+        return float(cm['fp']+cm['fn']) / n_grid_pts
+
+    # Compute accuracy, precision and recall
+    def prediction_metrics(self, prediction):
+        if prediction is None:
+            return dict(accuracy=0., precision=0., recall=0.)
+
+        cm = self.confusion_matrix(prediction)
+        return dict(
+            accuracy=float(cm['tp']+cm['tn']) / (cm['tp']+cm['tn']+cm['fp']+cm['fn']),
+            precision=0 if cm['tp']+cm['fp'] == 0 else float(cm['tp']) / (cm['tp']+cm['fp']),
+            recall=0 if cm['tp']+cm['fn'] == 0 else float(cm['tp']) / (cm['tp']+cm['fn'])
+        )
 
     def confusion_matrix(self, prediction):
-        if prediction is None:
-            return None
-
         mat = metrics.confusion_matrix(self.grid.flatten(), prediction.flatten(),
             labels=[1, 0])
         return dict(tp=mat[0,0], fn=mat[0,1], fp=mat[1,0], tn=mat[1,1])

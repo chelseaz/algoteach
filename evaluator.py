@@ -6,6 +6,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import os
+import pandas as pd
 import random
 import shutil
 import time
@@ -95,31 +96,40 @@ def run(settings, user_model, teacher, ground_truth):
     return history
 
 
-def compute_teacher_accuracies(settings, user_model, teacher, ground_truth):
+# Return dataframe of metrics for a single run with this teacher. 
+# Row i contains metrics for the learner prediction at time i.
+def compute_teacher_metrics(settings, user_model, teacher, ground_truth):
     history = run(settings, user_model, teacher, ground_truth)
-    errors = [ground_truth.prediction_error(prediction) for prediction in history.predictions]
-    return [error_to_accuracy(error) for error in errors]
+    metrics = [ground_truth.prediction_metrics(prediction) for prediction in history.predictions]
+    return pd.DataFrame(metrics)
 
 
-def aggregate_teacher_accuracies(settings, user_model, teacher_configs, ground_truth):
-    teacher_accuracies = []
+def compute_all_teachers(settings, user_model, teacher_configs, ground_truth):
+    all_teacher_metrics = []
     for config in teacher_configs:
         teacher_name = config.teacher.name
-        if config.reps == 1:
-            teacher_accuracies.append(
-                (teacher_name, compute_teacher_accuracies(settings, user_model, config.teacher, ground_truth))
-            )
+        teacher_metrics_all_reps = [compute_teacher_metrics(settings, user_model, config.teacher, ground_truth) for _ in range(config.reps)]
+        all_teacher_metrics.append((teacher_name, teacher_metrics_all_reps))
+
+    return all_teacher_metrics
+
+
+def aggregate_teacher_metrics(all_teacher_metrics, metric_name):
+    agg_metrics = []
+    for (teacher_name, teacher_metrics_all_reps) in all_teacher_metrics:
+        if len(teacher_metrics_all_reps) == 1:
+            teacher_metrics_df = teacher_metrics_all_reps[0]
+            agg_metrics.append((teacher_name, teacher_metrics_df[metric_name].values))
         else:
             # compute median, 5th and 95th percentiles
-            all_reps = np.vstack([compute_teacher_accuracies(
-                settings, user_model, config.teacher, ground_truth) for _ in range(config.reps)])
-            teacher_accuracies += [
+            all_reps = np.vstack([teacher_metrics_df[metric_name].values for teacher_metrics_df in teacher_metrics_all_reps])
+            agg_metrics += [
                 ('%s-p95' % teacher_name, np.percentile(all_reps, 95, axis=0)),
                 ('%s-median' % teacher_name, np.percentile(all_reps, 50, axis=0)),
                 ('%s-p05' % teacher_name, np.percentile(all_reps, 5, axis=0))
             ]
 
-    return teacher_accuracies
+    return agg_metrics
 
 
 # Simulate user behaving exactly according to user model. Compare teachers.
@@ -141,7 +151,8 @@ def eval_omniscient_teachers(ground_truth, user_model_fns, settings):
             TeacherConfig(grid_teacher, settings.TEACHER_REPS),
             TeacherConfig(optimal_teacher, 1)
         ]
-        teacher_accuracies = aggregate_teacher_accuracies(settings, user_model, teacher_configs, ground_truth)
+        all_teacher_metrics = compute_all_teachers(settings, user_model, teacher_configs, ground_truth)
+        teacher_accuracies = aggregate_teacher_metrics(all_teacher_metrics, 'accuracy')
         plot_teacher_accuracy(teacher_accuracies, 
             filename='%s/%s-%s-teacher-accuracy' % (settings.RUN_DIR, ground_truth.name, user_model.name),
             title="Comparison of teacher accuracy with %s user model\n%s grid with %s" % \
@@ -189,40 +200,40 @@ def all_simulations(args):
         settings=settings
     )
 
-    for degree in range(2, 5):
-        eval_omniscient_teachers(
-            ground_truth=SimplePolynomialGroundTruth(degree, settings),
-            user_model_fns=[RBF1SVMUserModelFn, RBF2SVMUserModelFn],#, RBFOKMUserModelFn, KDEUserModelFn, GCMUserModelFn],
-            settings=settings
-        )
-    for fn in [exp, sin, xsinx]:
-        eval_omniscient_teachers(
-            ground_truth=SimpleFunctionGroundTruth(settings, fn),
-            user_model_fns=[RBF1SVMUserModelFn, RBF2SVMUserModelFn],#, RBFOKMUserModelFn, KDEUserModelFn, GCMUserModelFn],
-            settings=settings
-        )
+    # for degree in range(2, 5):
+    #     eval_omniscient_teachers(
+    #         ground_truth=SimplePolynomialGroundTruth(degree, settings),
+    #         user_model_fns=[RBF1SVMUserModelFn, RBF2SVMUserModelFn],#, RBFOKMUserModelFn, KDEUserModelFn, GCMUserModelFn],
+    #         settings=settings
+    #     )
+    # for fn in [exp, sin, xsinx]:
+    #     eval_omniscient_teachers(
+    #         ground_truth=SimpleFunctionGroundTruth(settings, fn),
+    #         user_model_fns=[RBF1SVMUserModelFn, RBF2SVMUserModelFn],#, RBFOKMUserModelFn, KDEUserModelFn, GCMUserModelFn],
+    #         settings=settings
+    #     )
 
     # settings = Settings(DIM=(5, 5, 5), N_EXAMPLES=27, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
     # eval_omniscient_teachers(
     #     ground_truth=GeneralLinearGroundTruth(settings),
-    #     user_model_fns=[Linear2SVMUserModelFn, RBFOKMUserModelFn, KDEUserModelFn, GCMUserModelFn],
+    #     user_model_fns=[RBF1SVMUserModelFn, Linear2SVMUserModelFn],#, RBFOKMUserModelFn, KDEUserModelFn, GCMUserModelFn],
     #     settings=settings
     # )
     # eval_omniscient_teachers(
     #     ground_truth=SimplePolynomialGroundTruth(2, settings),
-    #     user_model_fns=[RBF2SVMUserModelFn, RBFOKMUserModelFn, KDEUserModelFn, GCMUserModelFn],
+    #     user_model_fns=[RBF2SVMUserModelFn],#, RBFOKMUserModelFn, KDEUserModelFn, GCMUserModelFn],
     #     settings=settings
     # )
 
     # settings = Settings(DIM=(3, 3, 3, 3), N_EXAMPLES=32, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
     # eval_omniscient_teachers(
     #     ground_truth=GeneralLinearGroundTruth(settings),
-    #     user_model_fns=[Linear2SVMUserModelFn, RBFOKMUserModelFn, KDEUserModelFn, GCMUserModelFn],
+    #     user_model_fns=[RBF1SVMUserModelFn, Linear2SVMUserModelFn],#, RBFOKMUserModelFn, KDEUserModelFn, GCMUserModelFn],
     #     settings=settings
     # )
     # eval_omniscient_teachers(
     #     ground_truth=SimplePolynomialGroundTruth(2, settings),
-    #     user_model_fns=[RBF2SVMUserModelFn, RBFOKMUserModelFn, KDEUserModelFn, GCMUserModelFn],
+    #     user_model_fns=[RBF2SVMUserModelFn],#, RBFOKMUserModelFn, KDEUserModelFn, GCMUserModelFn],
     #     settings=settings
     # )
 
