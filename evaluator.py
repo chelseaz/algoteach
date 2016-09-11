@@ -87,12 +87,11 @@ def run(settings, user_model, teacher, ground_truth):
     end_time = time.time()
     print "Took %d seconds" % (end_time - start_time)
 
-    plot_history(
-        history=history,
-        filename="%s/%s-%s-%s" % (settings.RUN_DIR, ground_truth.name, user_model.name, teacher.name),
-        title="Teaching with %s user model, %s teacher\n%s grid with %s" % \
-            (user_model.name, teacher.name, settings.dim_string(), str(ground_truth)),
-        settings=settings)
+    filename = "%s/%s-%s-%s" % (settings.RUN_DIR, ground_truth.name, user_model.name, teacher.name)
+    title = "Teaching with %s user model, %s teacher\n%s grid with %s" % \
+            (user_model.name, teacher.name, settings.dim_string(), str(ground_truth))
+    plot_ground_truth_and_examples(ground_truth=ground_truth, history=history, filename=filename+"-examples", title=title)
+    plot_history(history=history, filename=filename, title=title, settings=settings)
     return history
 
 
@@ -197,12 +196,12 @@ def all_simulations(args):
         bw=np.eye(len(settings.DIM)))
     GCMUserModelFn = lambda settings: GCMUserModel(settings, c=1.0, r=1)
 
-    # settings = Settings(DIM=(13, 6), N_EXAMPLES=16, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
-    # eval_omniscient_teachers(
-    #     ground_truth=GeneralLinearGroundTruth(settings),
-    #     user_model_fns=[RBF1SVMUserModelFn, Linear2SVMUserModelFn],#, RBFOKMUserModelFn, KDEUserModelFn, GCMUserModelFn],
-    #     settings=settings
-    # )
+    settings = Settings(DIM=(13, 6), N_EXAMPLES=16, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
+    eval_omniscient_teachers(
+        ground_truth=GeneralLinearGroundTruth(settings),
+        user_model_fns=[RBF1SVMUserModelFn, Linear2SVMUserModelFn],#, RBFOKMUserModelFn, KDEUserModelFn, GCMUserModelFn],
+        settings=settings
+    )
 
     # for degree in range(2, 5):
     #     eval_omniscient_teachers(
@@ -216,6 +215,15 @@ def all_simulations(args):
     #         user_model_fns=[RBF1SVMUserModelFn, RBF2SVMUserModelFn],#, RBFOKMUserModelFn, KDEUserModelFn, GCMUserModelFn],
     #         settings=settings
     #     )
+
+    settings = Settings(DIM=(10, 8), N_EXAMPLES=16, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
+    eval_omniscient_teachers(
+        ground_truth=GaussianGroundTruth(settings, threshold=0.01, bumps=[
+            (([0, 0], [[6., 1.], [0., 4.]]), 1.)
+        ]),
+        user_model_fns=[RBF1SVMUserModelFn, RBF2SVMUserModelFn],#, RBFOKMUserModelFn, KDEUserModelFn, GCMUserModelFn],
+        settings=settings
+    )
 
     settings = Settings(DIM=(12, 12), N_EXAMPLES=16, RUN_DIR=run_dir, TEACHER_REPS=teacher_reps)
     eval_omniscient_teachers(

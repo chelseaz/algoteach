@@ -14,12 +14,41 @@ def plot_ground_truth(ground_truth):
     plt.figure()
 
     plt.axis('off')
-    plt.title("Ground truth: %s grid with\n%s" % (settings.dim_string(), str(ground_truth)))
+    plt.suptitle("Ground truth: %s grid with\n%s" % (settings.dim_string(), str(ground_truth)))
     plt.imshow(ground_truth.grid.T, cmap=settings.GRID_CMAP, interpolation='none', origin='lower')
 
+    width, height = settings.DIM
     fig = plt.gcf()
-    fig.set_size_inches(6, 4)
+    fig.set_size_inches(min(6, width/2.0), 0.25+height/2.0)
     fig.savefig('%s/%s-ground-truth.png' % (settings.RUN_DIR, ground_truth.name), dpi=100)
+
+    plt.close()
+
+
+def plot_ground_truth_and_examples(ground_truth, history, filename, title):
+    settings = ground_truth.settings
+    if len(settings.DIM) > 2:
+        # plotting ground truth only supported for two dimensions
+        return
+
+    plt.figure()
+
+    plt.axis('off')
+    plt.suptitle(title)
+    plt.imshow(ground_truth.grid.T, cmap=settings.GRID_CMAP, interpolation='none', origin='lower')
+
+    if history is not None:
+        plotted = set()
+        for (i, (loc, label)) in enumerate(history.examples):
+            if loc in plotted: continue
+            plotted.add(loc)
+            x, y = loc
+            plt.annotate(s=str(i+1), xy=(x, y), color='black')
+
+    width, height = settings.DIM
+    fig = plt.gcf()
+    fig.set_size_inches(min(6, width/2.0), 0.25+height/2.0)
+    fig.savefig('%s.png' % filename, dpi=100)
 
     plt.close()
 
@@ -75,7 +104,7 @@ def plot_history(history, filename, title, settings):
         # plt.clabel(contour_set, inline=1, fontsize=10)
 
     plot_iterations(plot_prediction, history.predictions, suffix="preds")
-    if len(history.evaluations) > 0:
+    if len([e for e in history.evaluations if e is not None]) > 0:
         plot_iterations(plot_evaluation, history.evaluations, suffix="evals")
 
 
